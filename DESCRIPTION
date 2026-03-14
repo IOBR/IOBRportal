@@ -1,0 +1,37 @@
+Package: IOBRportal
+Type: Package
+Title: A Shiny-Based Platform for Bulk Transcriptome and Immuno-Oncology Analysis
+Version: 0.99.0
+Description: IOBRportal is an R package and Shiny-based platform for bulk transcriptome and immuno-oncology analysis. It integrates data preprocessing, signature score calculation, tumor microenvironment deconvolution, statistical analysis, visualization, mutation analysis, and cohort-oriented workflows into a unified analysis environment.
+Maintainer: Qingcong Luo <qingcongl@163.com>, Dongqiang Zeng <interlaken@smu.edu.cn>
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.3.3
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+Depends:
+    R (>= 4.2.0)
+Imports:
+    IOBR,
+    shiny,
+    DT,
+    bs4Dash,
+    shinyWidgets,
+    zip,
+    shinyhelper,
+    duckdb,
+    dplyr,
+    dbplyr,
+    pool,
+    DBI,
+    echarts4r,
+    waiter,
+    readxl,
+    writexl
+Suggests:
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0)
+URL: https://github.com/IOBR/IOBRportal, https://qingcongl.github.io/IOBRportal_book/
+BugReports: https://github.com/IOBR/IOBRportal/issues
