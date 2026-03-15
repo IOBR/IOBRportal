@@ -187,7 +187,9 @@ If you use IOBRportal in your work, please cite:
 
 ## ✉️ Reporting bugs
 
-E-mail questions or bug reports to **Qingcong Luo** (qingcongl@163.com) or **Dr. Dongqiang Zeng** (interlaken@smu.edu.cn).
+E-mail questions or bug reports to:
+- **Qingcong Luo** (qingcongl@163.com)
+- **Dr. Dongqiang Zeng** (interlaken@smu.edu.cn).
 
 ## 📄 License
 
