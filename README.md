@@ -47,7 +47,7 @@ This workflow supports:
 - signature-gene correlation analysis
 - correlation matrix construction
 
-## 🔄 Database
+## 🗂️ Cohort resources
 
 ### 1. TCGA Cohorts
 
@@ -145,17 +145,20 @@ You can install the development version from GitHub:
 ```r
 # install.packages("remotes")
 remotes::install_github("IOBR/IOBRportal")
+
 ```
 
 Then load the package:
 
 ```r
 library(IOBRportal)
+
 ```
 For the interactive Shiny interface:
 
 ```r
 run_shinyapp()
+
 ```
 Some cohort-oriented modules in local deployments may require separately configured external data resources.
 
@@ -185,11 +188,11 @@ If you use IOBRportal in your work, please cite:
 - the IOBRportal package paper or preprint, when available
 - the original methods implemented in the package, such as CIBERSORT, EPIC, xCell, ESTIMATE, TIMER, MCPcounter, quanTIseq, IPS, and related statistical tools
 
-## ✉️ Reporting bugs
+## ✉️ Contact
 
 E-mail questions or bug reports to:
 - **Qingcong Luo** (qingcongl@163.com)
-- **Dr. Dongqiang Zeng** (interlaken@smu.edu.cn).
+- **Dr. Dongqiang Zeng** (interlaken@smu.edu.cn)
 
 ## 📄 License
 
