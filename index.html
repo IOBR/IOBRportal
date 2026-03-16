@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Loading IOBRportal...</title>
+  <title>IOBRportal</title>
 
   <style>
     html,
@@ -32,39 +32,17 @@
       max-width: 80vw;
       height: auto;
       display: block;
-      margin: 0 auto 28px auto;
+      margin: 0 auto 24px auto;
     }
 
     .spinner {
-      width: 40px;
-      height: 40px;
-      margin: 0 auto 16px auto;
+      width: 38px;
+      height: 38px;
+      margin: 0 auto;
       border: 4px solid #d9d9d9;
       border-top: 4px solid #003388;
       border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
-    .text {
-      font-size: 30px;
-      font-weight: bold;
-      color: #003388;
-      margin: 0;
-    }
-
-    .subtext {
-      margin-top: 10px;
-      font-size: 14px;
-      color: #666666;
-    }
-
-    .subtext a {
-      color: #003388;
-      text-decoration: none;
-    }
-
-    .subtext a:hover {
-      text-decoration: underline;
+      animation: spin 0.9s linear infinite;
     }
 
     @keyframes spin {
@@ -81,23 +59,14 @@
   <script>
     setTimeout(function () {
       window.location.href = "http://biotree.top:38124/IOBRportal/";
-    }, 2000);
+    }, 800);
   </script>
 </head>
 
 <body>
   <div class="container">
-    <img class="logo" src="https://iobr.github.io/IOBRportal/man/figures/IOBRportal.png" alt="IOBRportal logo">
-
+    <img class="logo" src="https://iobr.github.io/IOBRportal/man/figures/IOBRportal.png?v=1" alt="IOBRportal logo">
     <div class="spinner"></div>
-
-    <p class="text">Loading IOBRportal...</p>
-
-    <div class="subtext">
-      Redirecting to the deployed application.<br>
-      If it does not open automatically,
-      <a href="http://biotree.top:38124/IOBRportal/">click here</a>.
-    </div>
   </div>
 </body>
 
