@@ -13,7 +13,7 @@ IOBRportal is an R package and Shiny-based web platform for bulk transcriptome a
 
 IOBRportal is designed to connect data preparation, feature generation, statistical analysis, and interactive visualization in one package-oriented framework. It supports both module-level analyses and workflow-level pipelines, allowing users to move from raw expression matrices or curated cohort tables to interpretable results in a reproducible manner.
 
-![](man/figures/IOBRportal_overview.svg)
+![](man/figures/IOBRportal_overview.png)
 
 ## 🔄 Main workflows
 
