@@ -5,7 +5,6 @@ library(shinyWidgets)
 #library(colourpicker)
 #library(ggsci)
 #library(ggplot2)
-library(IOBR)
 library(zip)
 library(shinyhelper)
 library(duckdb)
@@ -18,6 +17,7 @@ library(echarts4r)
 library(waiter)
 library(readxl)
 library(writexl)
+library(IOBR)
 
 
 options(shiny.maxRequestSize = 1024 * 1024^2)  # 设置最大上传文件大小为 1024MB
@@ -138,7 +138,7 @@ source("modules/prepare_cancercohort_data_module.R")
 ui <- shinyUI(
   #=== 1.bs4DashPage
   bs4DashPage(
-    title = "IOBR",
+    title = "IOBRportal",
     skin = NULL,
     freshTheme = NULL,
     options = NULL,
@@ -150,9 +150,9 @@ ui <- shinyUI(
     # 动画
     preloader = list(
       html = tagList(
-        waiter::spin_3(),
+        h4("Loading IOBRportal...", style = "color: #003388; font-weight: bold;"),
         br(),
-        h4("Loading IOBRportal...", style = "color: #003388; font-weight: bold;")
+        waiter::spin_3()
       ),
       color = "#ffffff"
     ),
@@ -194,7 +194,7 @@ ui <- shinyUI(
       bs4SidebarUserPanel(
         name = tags$span("IOBRportal", 
                          style = "font-size:20px;font-weight: bold;"), #大小为20px，加粗；
-        image = "IOBR.png" # 可加上头像
+        image = "IOBRportal.png" # 可加上头像
       ),
       hr(),
       
@@ -358,7 +358,25 @@ ui <- shinyUI(
             )
           ),
           
-          
+          bs4SidebarMenuItem(
+            text = "TME Interaction",
+            tabName = NULL,
+            icon = icon("project-diagram"), 
+            expandedName = "TME Interaction",
+            
+            bs4SidebarMenuSubItem(
+              text = "TME Clustering",
+              tabName = "tme_cluster",
+              icon = icon("sliders-h")
+            ),
+            
+            bs4SidebarMenuSubItem(
+              text = "Ligand-Receptor Interaction",
+              tabName = "lr_cal",
+              icon = icon("sliders-h")
+            )
+          ),
+
           bs4SidebarMenuItem(
             text = "Visualization",
             tabName = NULL,
@@ -408,25 +426,26 @@ ui <- shinyUI(
             ),
             
             bs4SidebarMenuSubItem(
-              text = "Survival Group Plot",
-              tabName = "surv_group",
-              icon = icon("sliders-h")
-            ),
-            bs4SidebarMenuSubItem(
               text = "Survival Plots",
               tabName = "sig_surv_plot",
               icon = icon("sliders-h")
             ),
             
             bs4SidebarMenuSubItem(
-              text = "Signature ROC Curves",
-              tabName = "sig_roc",
+              text = "Survival Group Plot",
+              tabName = "surv_group",
+              icon = icon("sliders-h")
+            ),
+
+            bs4SidebarMenuSubItem(
+              text = "Time ROC Curves",
+              tabName = "roc_time",
               icon = icon("sliders-h")
             ),
             
             bs4SidebarMenuSubItem(
-              text = "Time ROC Curves",
-              tabName = "roc_time",
+              text = "Signature ROC Curves",
+              tabName = "sig_roc",
               icon = icon("sliders-h")
             ),
             
@@ -448,27 +467,6 @@ ui <- shinyUI(
               icon = icon("sliders-h")
             )
           ),
-          
-          
-          bs4SidebarMenuItem(
-            text = "TME Interaction",
-            tabName = NULL,
-            icon = icon("project-diagram"), 
-            expandedName = "TME Interaction",
-            
-            bs4SidebarMenuSubItem(
-              text = "TME Clustering",
-              tabName = "tme_cluster",
-              icon = icon("sliders-h")
-            ),
-            
-            bs4SidebarMenuSubItem(
-              text = "Ligand-Receptor Interaction",
-              tabName = "lr_cal",
-              icon = icon("sliders-h")
-            )
-          ),
-          
           
           bs4SidebarMenuItem(
             text = "Mutation Module",
@@ -544,25 +542,25 @@ ui <- shinyUI(
 
           
           bs4SidebarMenuItem(
-            text = "Analysis Modules", # 建议叫 Analysis Modules 或 Data Modules
+            text = "Workflows", # 建议叫 Analysis Modules 或 Data Modules
             tabName = NULL,
             icon = icon("project-diagram"), # 使用 project-diagram 体现模块化
             startExpanded = TRUE,
             
             bs4SidebarMenuSubItem(
-              text = "IOBR Analysis", # 就是workflow_iobr
+              text = "IOBR Workflows", # 就是workflow_iobr
               tabName = "workflow_iobr", 
               icon = icon("object-group") # 使用 object-group 体现“结合/整合”的意思
             ),
             
             bs4SidebarMenuSubItem(
-              text = "Mutation Analysis", 
+              text = "Mutation Workflows", 
               tabName = "workflow_mutation", 
               icon = icon("dna")
             ),
             
             bs4SidebarMenuSubItem(
-              text = "Signature-Gene Analysis", 
+              text = "Signature-Gene Workflows", 
               tabName = "workflow_siggenes", 
               icon = icon("chart-line")
             )
@@ -589,7 +587,7 @@ ui <- shinyUI(
     
     #=== 1.4 bs4DashFooter
     footer = bs4DashFooter(
-      left = span("xxxx", style = "font-weight:bold"),
+      left = span("IOBRportal", style = "font-weight:bold"),
       right = NULL,
       fixed = TRUE
     ),

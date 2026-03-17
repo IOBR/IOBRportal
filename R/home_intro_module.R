@@ -188,7 +188,27 @@ home_introUI <- function(id) {
     ")),
 
     # =========================================================
-    # 1) HERO INTRODUCTION (Capability-focused, no detailed data stats)
+    # 1) OVERVIEW FIGURE (Main visual)
+    # =========================================================
+    div(
+      class = "iobr-figure-card",
+      div(
+        class = "iobr-figure-header",
+        tags$h4(class = "iobr-figure-title", "Framework Overview"),
+        tags$span(class = "iobr-figure-badge", "Workflow Summary")
+      ),
+      tags$img(
+        src = "IOBRportal overview.png",
+        style = "width: 100%; height: auto; display: block; margin: 0 auto; border-radius: 6px;"
+      ),
+      tags$div(
+        class = "iobr-figure-caption",
+        "Overview of IOBRportal architecture, including data foundation, analysis workflows, and downstream visualization outputs."
+      )
+    ),
+
+    # =========================================================
+    # 2) HERO INTRODUCTION (Capability-focused, no detailed data stats)
     # =========================================================
     div(
       class = "iobr-hero-card",
@@ -278,25 +298,7 @@ home_introUI <- function(id) {
       )
     ),
 
-    # =========================================================
-    # 2) OVERVIEW FIGURE (Main visual)
-    # =========================================================
-    div(
-      class = "iobr-figure-card",
-      div(
-        class = "iobr-figure-header",
-        tags$h4(class = "iobr-figure-title", "Framework Overview"),
-        tags$span(class = "iobr-figure-badge", "Workflow Summary")
-      ),
-      tags$img(
-        src = "IOBRportal overview.svg",
-        style = "width: 100%; height: auto; display: block; margin: 0 auto; border-radius: 6px;"
-      ),
-      tags$div(
-        class = "iobr-figure-caption",
-        "Overview of IOBRportal architecture, including data foundation, analysis workflows, and downstream visualization outputs."
-      )
-    ),
+
 
     # =========================================================
     # 3) LEARNING RESOURCES (No jump buttons)
@@ -309,11 +311,11 @@ home_introUI <- function(id) {
           tags$div(class = "iobr-resource-title", "Learning Resources"),
           tags$div(
             class = "iobr-resource-item",
-            HTML("📖 <b>Detailed Tutorial:</b> <a href='https://iobr.github.io/book/IOBR' target='_blank'>https://iobr.github.io/book/IOBR</a>")
+            HTML("📖 <b>Detailed Tutorial:</b> <a href='https://qingcongl.github.io/IOBRportal_book/' target='_blank'>https://qingcongl.github.io/IOBRportal_book/</a>")
           ),
           tags$div(
             class = "iobr-resource-item",
-            HTML("💻 <b>Code Repository:</b> <a href='https://github.com/IOBR/IOBRshiny' target='_blank'>https://github.com/IOBR/IOBRshiny</a>")
+            HTML("💻 <b>Code Repository:</b> <a href='https://github.com/IOBR/IOBRportal' target='_blank'>https://github.com/IOBR/IOBRportal</a>")
           )
         )
       )
