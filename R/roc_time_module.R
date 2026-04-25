@@ -202,7 +202,7 @@ roc_timeServer <- function(id, external_eset = NULL) {
       all_cols <- gsub("\\.", "-", colnames(data))
       is_num <- sapply(data, is.numeric)
       pool_numeric <- all_cols[is_num] # 初始数字池
-      blacklist_pattern <- "time|status|os|event|censored|days|months|years|fustat|futime|rfs|pfs|dfs"
+      blacklist_pattern <- "(^|_)(time|status|os|event|censored|days|months|years|fustat|futime|rfs|pfs|dfs)(_|$)"
       is_clinical <- grepl(blacklist_pattern, pool_numeric, ignore.case = TRUE)
       numeric_cols <- pool_numeric[!is_clinical]
       non_numeric_cols <- grep("time|status", all_cols[is_num], ignore.case = TRUE, value = TRUE)
@@ -295,7 +295,8 @@ roc_timeServer <- function(id, external_eset = NULL) {
             time_type  = input$time_type,
             palette    = input$palette,
             cols = cols_vec,
-            main       = if (input$main == "") NULL else input$main
+            main       = if (input$main == "") NULL else input$main,
+            path = NULL
           )
         }, error = function(e) {
           setProgress(1, message = "Error")

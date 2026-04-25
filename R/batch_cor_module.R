@@ -238,7 +238,7 @@ batch_corServer <- function(id, external_eset = NULL, target_cols = NULL) {
       all_cols <- gsub("\\.", "-", colnames(data))
       is_num <- unlist(sapply(data, is.numeric))
       pool_numeric <- all_cols[is_num]
-      blacklist_pattern <- "time|status|os|id"
+      blacklist_pattern <- "(^|_)(time|status|os|event|censored|days|months|years|fustat|futime|rfs|pfs|dfs)(_|$)"
       is_clinical <- grepl(blacklist_pattern, pool_numeric, ignore.case = TRUE)
       numeric_cols <- pool_numeric[!is_clinical]
       
@@ -288,7 +288,8 @@ batch_corServer <- function(id, external_eset = NULL, target_cols = NULL) {
       
       # 仅保留数据中存在的 Signature 名字
       sig_pool <- intersect(all_numeric_cols, names(signature_collection))
-      
+      sig_pool <- unique(c(sig_pool, "TMEscore_plus", "TMEscore_CIR"))
+
       # 强制将 Target 框锁定为 Signature 列表
       updateSelectizeInput(
         session, 
@@ -306,6 +307,7 @@ batch_corServer <- function(id, external_eset = NULL, target_cols = NULL) {
       sig_name <- input$batch_cor_target
       # sig_pool <- names(signature_collection) 
       sig_pool <- gsub("\\.", "-", names(signature_collection))
+      
 
       # 只有当选中的确实是 Signature 时才执行
       if (sig_name %in% sig_pool) {
@@ -315,7 +317,7 @@ batch_corServer <- function(id, external_eset = NULL, target_cols = NULL) {
         all_numeric_cols <- gsub("\\.", "-", colnames(data))
         is_num <- unlist(sapply(data, is.numeric))
         numeric_cols_only <- all_numeric_cols[is_num]
-        blacklist <- c("ID", "time", "status", "os", "TMEscor_CIR", "TMEscore_plus") # (这里用正则过滤更彻底)
+        blacklist <- "(^|_)(time|status|os|event|censored|days|months|years|fustat|futime|rfs|pfs|dfs|TMEscore_plus|TMEscore_CIR)(_|$)"
         clean_numeric_cols <- numeric_cols_only[!grepl(paste(blacklist, collapse="|"), numeric_cols_only, ignore.case = TRUE)]
         gene_pool <- setdiff(clean_numeric_cols, sig_pool)
         

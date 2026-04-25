@@ -10,7 +10,7 @@ batch_wilcoxonUI <- function(id) {
       "Batch_wilcoxon
       <span style='font-size:80%; color:#333;'>:
        Runs Wilcoxon rank-sum tests on multiple features (for two groups).</span>"
-      )),     
+    )),
     batch_wilcoxonBodyUI(id)
   )
 }
@@ -32,12 +32,12 @@ batch_wilcoxonBodyUI <- function(id, include_upload = TRUE) {
 
         if (isTRUE(include_upload)) {
           tagList(
-            uploadUI(ns("upload"))%>%
+            uploadUI(ns("upload")) %>%
               helper(
-                type    = "markdown",
-                icon    = "question-circle",
-                size    = "m",
-                colour  = "#007bff",
+                type = "markdown",
+                icon = "question-circle",
+                size = "m",
+                colour = "#007bff",
                 content = "demo_stad_com"
               )
           )
@@ -55,12 +55,12 @@ batch_wilcoxonBodyUI <- function(id, include_upload = TRUE) {
         pickerInput(
           inputId = ns("batch_wilcoxon_target"),
           label = "Group(=2)",
-          choices = NULL,      
-          multiple = FALSE,     
+          choices = NULL,
+          multiple = FALSE,
           options = pickerOptions(
             liveSearch = TRUE,
             size = 10,
-            style = "btn-outline-secondary", 
+            style = "btn-outline-secondary",
             dropupAuto = FALSE,
             container = "body"
           )
@@ -70,9 +70,9 @@ batch_wilcoxonBodyUI <- function(id, include_upload = TRUE) {
           inputId = ns("batch_wilcoxon_feature"),
           label = "Features",
           choices = NULL,
-          multiple = TRUE,      
+          multiple = TRUE,
           options = pickerOptions(
-            actionsBox = TRUE,  
+            actionsBox = TRUE,
             liveSearch = TRUE,
             size = 10,
             selectedTextFormat = "count > 3",
@@ -121,7 +121,6 @@ batch_wilcoxonBodyUI <- function(id, include_upload = TRUE) {
 
 batch_wilcoxonServer <- function(id, external_eset = NULL) {
   moduleServer(id, function(input, output, session) {
-
     ns <- session$ns
 
     input_data <- if (!is.null(external_eset)) {
@@ -133,24 +132,24 @@ batch_wilcoxonServer <- function(id, external_eset = NULL) {
     observeEvent(input_data(), {
       req(input_data())
       data <- input_data()
-      
+
       all_cols <- gsub("\\.", "-", colnames(data))
       is_num <- sapply(data, is.numeric)
       non_numeric_cols <- all_cols[!is_num]
       non_numeric_cols <- setdiff(non_numeric_cols, "ID") #只有字符，删去ID列
 
       pool_numeric <- all_cols[is_num] # 初始数字池
-      blacklist_pattern <- "time|status|os|id"
+      blacklist_pattern <- "(^|_)time|status|os|id(_|$)"
       is_clinical <- grepl(blacklist_pattern, pool_numeric, ignore.case = TRUE)
       numeric_cols <- pool_numeric[!is_clinical]
-      
+
       updatePickerInput(
         session = session,
         inputId = "batch_wilcoxon_target",
         choices = non_numeric_cols,
-        selected = character(0) 
+        selected = character(0)
       )
-      
+
       updatePickerInput(
         session = session,
         inputId = "batch_wilcoxon_feature",
@@ -163,12 +162,18 @@ batch_wilcoxonServer <- function(id, external_eset = NULL) {
 
     observeEvent(input$run_batch_wilcoxon, {
       req(input_data())
-      
-      if (is.null(input$batch_wilcoxon_target) || input$batch_wilcoxon_target == "") {
+
+      if (
+        is.null(input$batch_wilcoxon_target) ||
+          input$batch_wilcoxon_target == ""
+      ) {
         showNotification("Please select a Target column.", type = "error")
         return(NULL)
       }
-      if (is.null(input$batch_wilcoxon_feature) || length(input$batch_wilcoxon_feature) == 0) {
+      if (
+        is.null(input$batch_wilcoxon_feature) ||
+          length(input$batch_wilcoxon_feature) == 0
+      ) {
         showNotification("Please select at least one Feature.", type = "error")
         return(NULL)
       }
@@ -176,46 +181,83 @@ batch_wilcoxonServer <- function(id, external_eset = NULL) {
       withProgress(message = "Running batch Wilcoxon...", value = 0, {
         setProgress(0.2, message = "Reading data...")
 
-        data <- input_data() 
+        data <- input_data()
 
         colnames(data) <- gsub("\\.", "-", colnames(data))
 
         setProgress(0.5, message = "Processing Wilcoxon...")
 
         target <- input$batch_wilcoxon_target
-        features <- input$batch_wilcoxon_feature 
+        features <- input$batch_wilcoxon_feature
         feature_manipulation <- input$batch_wilcoxon_feature_manipulation == "T"
+
+        grp <- data[[target]]
+        grp <- trimws(as.character(grp))
+        grp[grp %in% c("", "NA", "N/A", "Unknown", "unknown")] <- NA
+        grp <- grp[!is.na(grp)]
+
+        group_names <- unique(grp)
+        n_group <- length(group_names)
+
+        if (n_group != 2) {
+          showNotification(
+            paste0(
+              "This analysis requires exactly 2 groups.\n\n",
+              "Current variable: ",
+              target,
+              "\n",
+              "Detected groups: ",
+              paste(group_names, collapse = ", "),
+              "\n\n",
+              "Suggestion:\n",
+              "• Use a binary grouping variable\n",
+              "• Or switch to Kruskal Test"
+            ),
+            type = "warning", # ⚠️ 不要用 error
+            duration = 7
+          )
+          return(NULL)
+        }
 
         # 二次校验列是否存在
         req_cols <- c(target, features)
         if (!all(req_cols %in% colnames(data))) {
-          showNotification("Selected columns not found in data.", type = "error")
+          showNotification(
+            "Selected columns not found in data.",
+            type = "error"
+          )
           return(NULL)
-        }
-        
-        clean_features <- setdiff(features, target)
-        
-        if (length(clean_features) == 0) {
-           showNotification("No valid features selected (Target cannot be a feature).", type = "error")
-           return(NULL)
         }
 
-        result <- tryCatch({
-          batch_wilcoxon(
-            data                 = data,
-            target               = target,
-            feature              = clean_features, 
-            feature_manipulation = feature_manipulation
-          )
-        }, error = function(e) {
-          setProgress(1, message = "Error")
+        clean_features <- setdiff(features, target)
+
+        if (length(clean_features) == 0) {
           showNotification(
-            paste("Error during batch_wilcoxon():", e$message),
-            type = "error",
-            duration = 8
+            "No valid features selected (Target cannot be a feature).",
+            type = "error"
           )
           return(NULL)
-        })
+        }
+
+        result <- tryCatch(
+          {
+            batch_wilcoxon(
+              data = data,
+              target = target,
+              feature = clean_features,
+              feature_manipulation = feature_manipulation
+            )
+          },
+          error = function(e) {
+            setProgress(1, message = "Error")
+            showNotification(
+              paste("Error during batch_wilcoxon():", e$message),
+              type = "error",
+              duration = 8
+            )
+            return(NULL)
+          }
+        )
 
         req(result)
 

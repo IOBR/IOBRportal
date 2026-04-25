@@ -221,45 +221,52 @@ prepare_tcga_dataServer <- function(id, pool) {
         final_list <- tryCatch({
           
           # --- 1. Connection Check ---
-          if (!dbIsValid(pool)) stop("Database connection lost.")
-          
-          # Initialize variable
-          subset_data <- NULL
-          
-          # =========================================================
-          # BRANCH A: Signature Scoring Logic
-          # =========================================================
           if (input$data_type == "sig") {
-            
-            setProgress(0.2, message = "Parsing Signature selection...")
-            
-            # 1. Determine signature set
-            method <- input$calculate_sig_score_method
-            target_sig_name_str <- if (method == "pca") {
-              input$calculate_sig_score_signature_pca
-            } else {
-              input$calculate_sig_score_signature_ssgsea
-            }
-            req(target_sig_name_str)
-            
-            # 2. Get column names from R object
-            if (!exists(target_sig_name_str)) {
-              stop(paste("Signature list object not found:", target_sig_name_str))
-            }
-            target_sig_list <- get(target_sig_name_str)
-            sig_names_needed <- names(target_sig_list)
-            
-            # 3. Query Database (Pancancer compatible)
-            setProgress(0.4, message = paste("Querying Signature data for", input$tcga_cancer, "..."))
-            
-            tbl_sig <- tbl(pool, "signature_table")
-            
-            subset_data <- tbl_sig %>% 
-              dplyr::filter(CancerType == !!input$tcga_cancer) %>% 
-              dplyr::select(ID, dplyr::any_of(sig_names_needed)) %>% 
-              collect()
-              
-            if (nrow(subset_data) == 0) stop(paste("No signature data found for:", input$tcga_cancer))
+  
+  setProgress(0.2, message = "Parsing Signature selection...")
+  
+  method <- input$calculate_sig_score_method
+  target_sig_name_str <- if (method == "pca") {
+    input$calculate_sig_score_signature_pca
+  } else {
+    input$calculate_sig_score_signature_ssgsea
+  }
+  req(target_sig_name_str)
+
+  # target_sig_list <- sig_map[[target_sig_name_str]]
+  # sig_names_needed <- names(target_sig_list)
+  # 数据库模块只需要这些 names 去匹配 DuckDB 中已经预计算好的列
+  sig_names_needed <- load_iobr_signature_names(target_sig_name_str) 
+  
+  if (is.null(sig_names_needed) || length(sig_names_needed) == 0) {
+    stop(paste("Signature object has no valid names:", target_sig_name_str))
+  }
+  
+  setProgress(0.4, message = paste("Querying Signature data for", input$tcga_cancer, "..."))
+  
+  tbl_sig <- tbl(pool, "signature_table")
+  all_columns <- colnames(tbl_sig)
+  matched_cols <- intersect(sig_names_needed, all_columns)
+  
+  if (length(matched_cols) == 0) {
+    stop(
+      paste0(
+        "No signature columns matched in database for ",
+        target_sig_name_str,
+        ". Example expected names: ",
+        paste(head(sig_names_needed, 5), collapse = ", ")
+      )
+    )
+  }
+  
+  subset_data <- tbl_sig %>% 
+    dplyr::filter(CancerType == !!input$tcga_cancer) %>% 
+    dplyr::select(ID, dplyr::all_of(matched_cols)) %>% 
+    collect()
+  
+  if (nrow(subset_data) == 0) {
+    stop(paste("No signature data found for:", input$tcga_cancer))
+  }
             
           # =========================================================
           # BRANCH B: TME Deconvolution Logic (Updated for Integration)

@@ -82,6 +82,34 @@ find_markers_in_bulkBodyUI <- function(id, include_upload = TRUE) {
             "Spectra" = "Spectral"
           ),
           selected = "RdBu"
+        ),
+
+        textAreaInput(
+          inputId = ns("group_custom_cols"),
+          label = "Custom Group Colors",
+          value = "",
+          placeholder = "e.g., #E64B35, #4DBBD5, #00A087\nSeparate by comma",
+          rows = 3,
+          resize = "vertical"
+        ),
+        br(),
+        tags$p(
+          style = "color: #555; font-style: italic; font-size: 90%; margin-top: -10px;",
+          "Input hex codes or color names separated by comma. If filled, 'Group Color' will be ignored."
+        ),
+
+        textAreaInput(
+          inputId = ns("heatmap_custom_cols"),
+          label = "Custom Heatmap Colors",
+          value = "",
+          placeholder = "e.g., navy, white, firebrick3\nAt least 2 colors, separated by comma",
+          rows = 3,
+          resize = "vertical"
+        ),
+        br(),
+        tags$p(
+          style = "color: #555; font-style: italic; font-size: 90%; margin-top: -10px;",
+          "Input hex codes or color names separated by comma. If filled, 'Heatmap Color' will be ignored."
         )
       ),
 
@@ -128,6 +156,20 @@ find_markers_in_bulkServer <- function(id, external_eset = NULL, external_pdata 
       uploadServer("upload_pdata")
     }
 
+    parse_custom_cols <- function(raw_cols_text) {
+      out <- NULL
+
+      if (!is.null(raw_cols_text) && trimws(raw_cols_text) != "") {
+        split_cols <- unlist(strsplit(raw_cols_text, "[,;\n]"))
+        split_cols <- trimws(split_cols)
+        out <- split_cols[split_cols != ""]
+
+        if (length(out) == 0) out <- NULL
+      }
+
+      out
+    }
+
     eset_data <- reactive({
       req(raw_eset_source()) # 确保有数据
       eset <- raw_eset_source()
@@ -160,7 +202,7 @@ find_markers_in_bulkServer <- function(id, external_eset = NULL, external_pdata 
       non_numeric_cols <- setdiff(non_numeric_cols, "ID") #只有字符，删去ID列
 
       pool_numeric <- all_cols[is_num] # 初始数字池
-      blacklist_pattern <- "time|status|os|id"
+      blacklist_pattern <- "(^|_)time|status|os|id(_|$)"
       is_clinical <- grepl(blacklist_pattern, pool_numeric, ignore.case = TRUE)
       numeric_cols <- pool_numeric[!is_clinical]
 
@@ -215,7 +257,15 @@ find_markers_in_bulkServer <- function(id, external_eset = NULL, external_pdata 
             npcs = safe_npcs
           )
         }, error = function(e) {
-          showNotification(paste("Error:", e$message), type = "error", duration = 8)
+          msg <- e$message
+          if (grepl("Must group by variables found in \\.data", msg)) {
+            showNotification(
+              "No marker genes found under current thresholds (or only one valid group after matching). Try lowering thresholds: only.pos=FALSE, min.pct=0.1, thresh.use=0.1.",
+              type = "warning", duration = 10
+            )
+          } else {
+            showNotification(paste("Error:", msg), type = "error", duration = 8)
+          }
           return(NULL)
         })
         
@@ -266,28 +316,48 @@ find_markers_in_bulkServer <- function(id, external_eset = NULL, external_pdata 
         "paired" = c("#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99", "#E31A1C", "#FDBF6F", "#FF7F00", "#CAB2D6", "#6A3D9A")
       )
       
-      base_colors <- pal_db[[input$group_color_style]]
-      
-      # 如果组数超过色板颜色数，使用渐变插值；否则直接取前 n 个
+      custom_group_cols <- parse_custom_cols(input$group_custom_cols)
+
+      if (!is.null(custom_group_cols)) {
+        base_colors <- custom_group_cols
+      } else {
+        base_colors <- pal_db[[input$group_color_style]]
+      }
+
+      # 如果组数超过颜色数：插值；否则直接取前 n 个
       if (n_groups <= length(base_colors)) {
         cols <- base_colors[1:n_groups]
       } else {
-        cols <- colorRampPalette(base_colors)(n_groups)
+        if (length(base_colors) == 1) {
+          cols <- rep(base_colors, n_groups)
+        } else {
+          cols <- colorRampPalette(base_colors)(n_groups)
+        }
       }
 
-      heatmap_col_func <- switch(input$heatmap_body_color,
-        "RdBu" = rev(colorRampPalette(RColorBrewer::brewer.pal(11, "RdBu"))(256)),
-        "RdGn" = rev(colorRampPalette(RColorBrewer::brewer.pal(11, "RdYlGn"))(256)),
-        "Spectral" = rev(colorRampPalette(RColorBrewer::brewer.pal(11, "Spectral"))(256)),
-        "viridis" = viridis::viridis(256)
-      )
+      custom_heatmap_cols <- parse_custom_cols(input$heatmap_custom_cols)
+
+      if (!is.null(custom_heatmap_cols)) {
+        if (length(custom_heatmap_cols) == 1) {
+          heatmap_col_func <- colorRampPalette(c("white", custom_heatmap_cols))(256)
+        } else {
+          heatmap_col_func <- colorRampPalette(custom_heatmap_cols)(256)
+        }
+      } else {
+        heatmap_col_func <- switch(input$heatmap_body_color,
+          "RdBu" = rev(colorRampPalette(RColorBrewer::brewer.pal(11, "RdBu"))(256)),
+          "RdGn" = rev(colorRampPalette(RColorBrewer::brewer.pal(11, "RdYlGn"))(256)),
+          "Spectral" = rev(colorRampPalette(RColorBrewer::brewer.pal(11, "Spectral"))(256)),
+          "viridis" = viridis::viridis(256)
+        )
+      }
       
       # 6. Seurat 绘图
       p <- Seurat::DoHeatmap(
         object = sce,
         features = top_markers$gene,
         group.by = group_col,
-        group.colors = cols, 
+        group.colors = cols,
         size = 4,
         draw.lines = FALSE
       ) + 

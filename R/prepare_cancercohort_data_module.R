@@ -254,13 +254,10 @@ prepare_cancercohort_dataServer <- function(id, pool) {
             }
             req(target_sig_name_str)
             
-            # 2. 获取 R 环境中的列表对象 (必须在 global.R 中预加载这些 list!)
-            if (!exists(target_sig_name_str)) {
-              stop(paste("Signature list object not found in R environment:", target_sig_name_str))
-            }
-            target_sig_list <- get(target_sig_name_str)
-            sig_names_needed <- names(target_sig_list)
-            
+            # 2. 获取 R 环境中的列表对象
+            # 数据库模块只需要这些 names 去匹配 DuckDB 中已经预计算好的列
+            sig_names_needed <- load_iobr_signature_names(target_sig_name_str)
+
             # 3. 数据库查询
             setProgress(0.4, message = paste("Querying Signature data for", input$sel_cancer, "..."))
             

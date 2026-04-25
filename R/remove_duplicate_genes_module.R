@@ -42,7 +42,7 @@ remove_duplicate_genesBodyUI <- function(id, include_upload = TRUE) {
                 icon    = "question-circle",
                 size    = "m",
                 colour  = "#007bff",
-                content = "demo_stad_tpm"
+                content = "demo_stad_tpm2"
               )
           )
         },

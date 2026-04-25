@@ -125,8 +125,15 @@ sig_boxBodyUI <- function(id, include_upload = TRUE) {
         ),
       
         selectInput(
-          inputId = ns("sig_box_show_pvalue"),
-          label = "Show P-value",
+          inputId = ns("sig_box_show_pairwise_p"),
+          label = "Show Pairwise P-value",
+          choices = c("True" = "T", "False" = "F"),
+          selected = "T"
+        ),
+
+        selectInput(
+          inputId = ns("sig_box_show_overall_p"),
+          label = "Show Overall P-value",
           choices = c("True" = "T", "False" = "F"),
           selected = "T"
         ),
@@ -211,7 +218,7 @@ sig_boxServer <- function(id, external_eset = NULL) {
       non_numeric_cols <- setdiff(non_numeric_cols, "ID") #只有字符，删去ID列
 
       pool_numeric <- all_cols[is_num] # 初始数字池
-      blacklist_pattern <- "time|status|os|id"
+      blacklist_pattern <- "(^|_)time|status|os|id(_|$)"
       is_clinical <- grepl(blacklist_pattern, pool_numeric, ignore.case = TRUE)
       numeric_cols <- pool_numeric[!is_clinical]
       
@@ -248,6 +255,28 @@ sig_boxServer <- function(id, external_eset = NULL) {
         data <- input_data()
 
         colnames(data) <- gsub("\\.", "-", colnames(data))
+        
+        # ===== 分组样本数检查（给用户看的）=====
+check_df <- data[, c(input$sig_box_variable, input$sig_box_signature), drop = FALSE]
+colnames(check_df) <- c("variable", "signature")
+
+# 去掉 NA
+check_df <- check_df[!is.na(check_df$variable), , drop = FALSE]
+
+group_count <- table(check_df$variable)
+low_n_groups <- group_count[group_count <= 1]
+
+if (length(low_n_groups) > 0) {
+  showNotification(
+    paste0(
+      "Some groups have too few samples: ",
+      paste0(names(low_n_groups), " (n=", as.integer(low_n_groups), ")", collapse = ", "),
+      ". Statistical comparisons may be skipped."
+    ),
+    type = "warning",
+    duration = 8
+  )
+}
         
         # 检查列是否存在
         if (!(input$sig_box_signature %in% colnames(data))) {
@@ -291,7 +320,8 @@ sig_boxServer <- function(id, external_eset = NULL) {
             point_size       = input$sig_box_point_size,
             size_of_font     = input$sig_box_size_of_font,
             size_of_pvalue   = input$sig_box_size_of_pvalue,
-            show_pvalue      = input$sig_box_show_pvalue == "T",
+            show_pairwise_p = input$sig_box_show_pairwise_p == "T",
+            show_overall_p  = input$sig_box_show_overall_p == "T",
             return_stat_res  = FALSE
           )
         }, error = function(e) {

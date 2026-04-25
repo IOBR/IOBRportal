@@ -59,9 +59,9 @@ anno_esetBodyUI <- function(id, include_upload = TRUE) {
           inputId = ns("anno_eset_annotation"),
           label   = "Annotation",
           choices = c(
-            "RNA-seq (Human)"       = "anno_grch38",
-            "Affymetrix (Human)"    = "anno_hug133plus2",
-            "Illumina (Human)"      = "anno_illumina",
+            "RNA-seq (anno_grch38)"       = "anno_grch38",
+            "Affymetrix (anno_hug133plus2)"    = "anno_hug133plus2",
+            "Illumina (anno_illumina)"      = "anno_illumina",
             "RNA-seq (Mouse)"       = "anno_gc_vm32"
           ),
           selected = "anno_grch38"
@@ -136,9 +136,10 @@ anno_esetServer <- function(id, external_eset = NULL) {
         req(nrow(data) > 0)
 
         annotation_file <- input$anno_eset_annotation
-        annotation_data <- get(annotation_file, envir = asNamespace("IOBR"))
+        data(list = annotation_file, package = "IOBR", envir = environment())
+        annotation_data <- get(annotation_file, envir = environment())
 
-        anno_eset_probe <- if (annotation_file == "anno_illumina") {
+        anno_eset_probe <- if (annotation_file %in% c("anno_illumina", "anno_hug133plus2")) {
           "probe_id"
         } else {
           "id"
@@ -163,6 +164,7 @@ anno_esetServer <- function(id, external_eset = NULL) {
             return(NULL)  
           })
 
+        req(!is.null(anno_eset_data))
         req(anno_eset_data)
         if (input$log2 == "T") {
            setProgress(0.8, message = "Performing Log2 transformation...")

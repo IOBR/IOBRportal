@@ -36,17 +36,30 @@ datasets_overviewUI <- function(id) {
         color: #003388; 
         font-weight: 700;
       }
-
     ")),
     
+    tags$script(HTML("
+      $(document).on('shown.bs.tab shown.lte.cardwidget expanded.lte.cardwidget', function() {
+        setTimeout(function() {
+          window.dispatchEvent(new Event('resize'));
+        }, 300);
+      });
+
+      $(document).on('collapsed.lte.pushmenu shown.lte.pushmenu', function() {
+        setTimeout(function() {
+          window.dispatchEvent(new Event('resize'));
+        }, 300);
+      });
+    ")),
+
     # --- 1. 顶部简介 (纯 div 实现，无多余空白) ---
     div(
       class = "description-box",
       h3("IOBRportal Database Statistics"), # 标题改用 h3，黑色
       HTML("
         The IOBRportal integrates multi-omics data from four major cohorts: 
-        <b>TCGA Cohorts</b>, <b>Cancer Cohorts</b> (predominantly GEO), <b>Immunotherapy Cohorts</b>, and 
-        <b>Other Cohorts</b> (including CPTAC and TARGET). 
+        <b>TCGA Cohort</b>, <b>MOLC (Molecular Cohort)</b> (predominantly GEO), <b>IMMC (Immunotherapy Cohort)</b>, and 
+        <b>CLIC (Clinical Cohort)</b> (including CPTAC and TARGET). 
         The data is structured into two primary analysis modes—<b>Calculate Sigscore</b> 
         and <b>Deconvolute TME</b> features—designed to facilitate comprehensive 
         downstream bioinformatics analyses.
@@ -114,7 +127,7 @@ datasets_overviewUI <- function(id) {
           column(6, 
             actionButton(
               inputId = ns("btn_tcga"), 
-              label = "TCGA Cohort", 
+              label = "TCGA", 
               icon = icon("align-left"), 
               status = "primary",    # 蓝色
               class = "btn-lg btn-block", # 大按钮 + 充满宽度
@@ -125,7 +138,7 @@ datasets_overviewUI <- function(id) {
           column(6, 
             actionButton(
               inputId = ns("btn_cancer"), 
-              label = "Cancer Cohort", 
+              label = "MOLC", 
               icon = icon("procedures"), 
               status = "danger",     # 红色
               class = "btn-lg btn-block",
@@ -136,7 +149,7 @@ datasets_overviewUI <- function(id) {
           column(6, 
             actionButton(
               inputId = ns("btn_immuno"), 
-              label = "Immunotherapy", 
+              label = "IMMC", 
               icon = icon("syringe"), 
               status = "success",    # 绿色
               class = "btn-lg btn-block",
@@ -147,7 +160,7 @@ datasets_overviewUI <- function(id) {
           column(6, 
             actionButton(
               inputId = ns("btn_other"), 
-              label = "Other Cohort", 
+              label = "CLIC", 
               icon = icon("folder-open"), 
               status = "warning",    # 橙色
               class = "btn-lg btn-block",
@@ -166,10 +179,11 @@ datasets_overviewServer <- function(id, parent_session) {
     
     # --- 1. 读取并基础清洗数据 (不在此处过滤 Pan-Cancer) ---
     df_clean <- reactive({
-      req(file.exists("data/cohorts_info.csv"))
+      req(file.exists("data/cohorts_info.xlsx"))
       
-      df <- read.csv("data/cohorts_info.csv", header = TRUE, stringsAsFactors = FALSE)
-      
+      # df <- read.csv("data/cohorts_info.xlsx", header = TRUE, stringsAsFactors = FALSE)      
+      df <- readxl::read_excel("data/cohorts_info.xlsx", sheet = "Sheet1") %>% as.data.frame()
+
       df %>%
         mutate(
           Sample = as.numeric(as.character(Sample)),

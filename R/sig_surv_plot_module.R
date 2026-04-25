@@ -175,7 +175,7 @@ sig_surv_plotServer <- function(id, external_eset = NULL) {
       all_cols <- gsub("\\.", "-", colnames(data))
       is_num <- sapply(data, is.numeric)
       pool_numeric <- all_cols[is_num] # 初始数字池
-      blacklist_pattern <- "time|status|os|event|censored|days|months|years|fustat|futime|rfs|pfs|dfs"
+      blacklist_pattern <- "(^|_)(time|status|os|event|censored|days|months|years|fustat|futime|rfs|pfs|dfs)(_|$)"
       is_clinical <- grepl(blacklist_pattern, pool_numeric, ignore.case = TRUE)
       numeric_cols <- pool_numeric[!is_clinical]
       non_numeric_cols <- grep("time|status", all_cols[is_num], ignore.case = TRUE, value = TRUE)
@@ -262,7 +262,7 @@ sig_surv_plotServer <- function(id, external_eset = NULL) {
             time_type   = input$sig_surv_plot_time_type,
             palette     = input$sig_surv_plot_palette,
             show_col    = FALSE,
-            fig.type    = "pdf"
+            save_path = NULL
           )
         }, error = function(e) {
           setProgress(1, message = "Error")

@@ -156,7 +156,7 @@ batch_pccServer <- function(id, external_eset = NULL) {
       all_cols <- gsub("\\.", "-", colnames(data))
       is_num <- sapply(data, is.numeric)
       pool_numeric <- all_cols[is_num] # 初始数字池
-      blacklist_pattern <- "time|status|os"
+      blacklist_pattern <- "(^|_)time|status|os|id(_|$)"
       is_clinical <- grepl(blacklist_pattern, pool_numeric, ignore.case = TRUE)
       numeric_cols <- pool_numeric[!is_clinical]
       non_numeric_cols <- setdiff(all_cols, numeric_cols)

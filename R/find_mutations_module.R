@@ -121,16 +121,16 @@ find_mutationsBodyUI <- function(id, include_upload = TRUE) {
         selectInput(
           inputId = ns("oncoprint_group_by"),
           label   = "Group By",
-          choices = c("Mean" = "mean", "Quantile" = "quantile"),
+          choices = c("Mean" = "mean", "Quantile" = "quantile3"),
           selected = "mean"
         ),
 
-        textInput(
-          inputId = ns("oncoprint_cols"),
-          label   = "Colors",
-          value   = "#224444",
-          placeholder = "e.g., #224444"
-        ),
+        # textInput(
+        #   inputId = ns("oncoprint_cols"),
+        #   label   = "Colors",
+        #   value   = "#224444",
+        #   placeholder = "e.g., #224444"
+        # ),
         
         sliderInput(
           inputId = ns("gene_counts"),
@@ -171,12 +171,12 @@ find_mutationsBodyUI <- function(id, include_upload = TRUE) {
           step    = 0.1
         ),
 
-        selectInput(
-          inputId = ns("palette"),
-          label   = "Palette",
-          choices = c("nrc","jama","aaas","jco","paired1","paired2","paired3","paired4","accent","set2"),
-          selected = "jama"
-        ),
+        # selectInput(
+        #   inputId = ns("palette"),
+        #   label   = "Palette",
+        #   choices = c("nrc","jama","aaas","jco","paired1","paired2","paired3","paired4","accent","set2"),
+        #   selected = "jama"
+        # ),
 
         selectInput(
           inputId = ns("jitter"),
@@ -330,14 +330,29 @@ find_mutationsServer <- function(id, external_mut_matrix = NULL) {
         colnames(sig_data) <- gsub("\\.", "-", colnames(sig_data))
 
         # --- 生成结果文件夹 (相对路径) ---
+        # folder_name <- paste0("Mutation_Results_", format(Sys.time(), "%Y%m%d_%H%M%S"))
+        # if(!dir.exists(folder_name)) dir.create(folder_name)
+        # res_folder(folder_name)
+        # --- 生成结果文件夹（临时目录，不污染项目目录） ---
+        tmp_root <- file.path(tempdir(), paste0("find_mutations_", session$token))
+        if (!dir.exists(tmp_root)) dir.create(tmp_root, recursive = TRUE)
+
         folder_name <- paste0("Mutation_Results_", format(Sys.time(), "%Y%m%d_%H%M%S"))
-        if(!dir.exists(folder_name)) dir.create(folder_name)
-        res_folder(folder_name)
+        full_tmp_folder <- file.path(tmp_root, folder_name)
+        if (!dir.exists(full_tmp_folder)) dir.create(full_tmp_folder, recursive = TRUE)
+
+        # 存完整路径，供 ZIP 下载使用
+        res_folder(full_tmp_folder)
 
         # --- 运行分析 ---
         setProgress(0.5, message = "Running analysis...")
         
         res <- tryCatch({
+
+          old_wd <- getwd()
+          on.exit(setwd(old_wd), add = TRUE)
+          setwd(tmp_root)
+
           find_mutations(
             mutation_matrix      = mut_data(),
             signature_matrix     = sig_data,
@@ -347,15 +362,15 @@ find_mutationsServer <- function(id, external_mut_matrix = NULL) {
             method               = input$method,
             save_path            = folder_name,
             plot                 = TRUE,
-            show_plot            = TRUE, 
-            palette              = input$palette,
+            show_plot            = FALSE, 
+            palette              = "jama",
             show_col             = FALSE,           
             oncoprint_group_by   = input$oncoprint_group_by,
-            oncoprint_col        = input$oncoprint_cols,
+            oncoprint_col        = "#224444",
             gene_counts          = input$gene_counts,
             jitter               = input$jitter == "T",
             point_size           = input$point_size,
-            point.alpha          = input$point_alpha
+            point_alpha          = input$point_alpha
           )
         }, error = function(e) {
           setProgress(1, message = "Error")
@@ -425,7 +440,7 @@ find_mutationsServer <- function(id, external_mut_matrix = NULL) {
       },
       content = function(file) {
         target_folder <- res_folder()
-        full_path     <- file.path(getwd(), target_folder)
+        full_path     <- target_folder
         
         if (is.null(target_folder) || !dir.exists(full_path)) {
           showNotification("Please run analysis first.", type = "error")

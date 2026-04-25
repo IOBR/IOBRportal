@@ -56,17 +56,6 @@ count2tpmBodyUI <- function(id, include_upload = TRUE) {
         ),
         
         selectInput(
-          inputId = ns("count2tpm_idType"),
-          label = "ID Type",
-          choices = c(
-            "Ensembl" = "ensembl",
-            "Entrez" = "entrez",
-            "Symbol" = "symbol"
-          ),
-          selected = "ensembl"
-        ),
-        
-        selectInput(
           inputId = ns("count2tpm_org"),
           label = "Organism",
           choices = c(
@@ -75,7 +64,39 @@ count2tpmBodyUI <- function(id, include_upload = TRUE) {
           ),
           selected = "hsa"
         ),
+
+        # Human: Ensembl / Entrez / Symbol
+        conditionalPanel(
+          condition = "input.count2tpm_org == 'hsa'",
+          ns = ns,
+          selectInput(
+            inputId = ns("count2tpm_idType_hsa"),
+            label = "ID Type",
+            choices = c(
+              "Ensembl" = "ensembl",
+              "Entrez"  = "entrez",
+              "Symbol"  = "symbol"
+            ),
+            selected = "ensembl"
+          )
+        ),
         
+        # Mouse: Ensembl / MGI / Symbol
+        conditionalPanel(
+          condition = "input.count2tpm_org == 'mmus'",
+          ns = ns,
+          selectInput(
+            inputId = ns("count2tpm_idType_mmus"),
+            label = "ID Type",
+            choices = c(
+              "Ensembl" = "ensembl",
+              "MGI"     = "mgi",
+              "Symbol"  = "symbol"
+            ),
+            selected = "ensembl"
+          )
+        ),
+
         selectInput(
           inputId = ns("count2tpm_source"),
           label = "Source",
@@ -133,7 +154,19 @@ count2tpmServer <- function(id, external_eset = NULL) {
     }
     
     count2tpm_result <- reactiveVal(NULL)
-    
+
+    current_idType <- reactive({
+      req(input$count2tpm_org)
+
+      if (input$count2tpm_org == "mmus") {
+        req(input$count2tpm_idType_mmus)
+        input$count2tpm_idType_mmus
+      } else {
+        req(input$count2tpm_idType_hsa)
+        input$count2tpm_idType_hsa
+      }
+    })
+
     observeEvent(input$run_count2tpm, {
       req(input_data())
       
@@ -148,7 +181,7 @@ count2tpmServer <- function(id, external_eset = NULL) {
         tpm_data <- tryCatch({
           count2tpm(
             countMat = data,
-            idType   = input$count2tpm_idType,
+            idType   = current_idType(),
             org      = input$count2tpm_org,
             source   = input$count2tpm_source
           )
@@ -162,11 +195,12 @@ count2tpmServer <- function(id, external_eset = NULL) {
           return(NULL)
         })
         
+        req(!is.null(tpm_data))
         req(tpm_data)
         if (input$log2 == "T") {
-           setProgress(0.8, message = "Performing Log2 transformation...")
-           # 假设 log2eset 是你已经加载的函数 (通常等同于 log2(x + 1))
-           tpm_data <- log2eset(tpm_data) 
+          setProgress(0.8, message = "Performing Log2 transformation...")
+          # 假设 log2eset 是你已经加载的函数 (通常等同于 log2(x + 1))
+          tpm_data <- log2eset(tpm_data)
         }
 
         colnames(tpm_data) <- gsub("\\.", "-", colnames(tpm_data))

@@ -109,6 +109,12 @@ deconvo_tmeBodyUI <- function(id, include_upload = TRUE) {
             "Absolute Method",
             choices = c("Sigscore" = "sig.score", "No Sum-to-1" = "no.sumto1"),
             selected = "sig.score"
+          ),
+          selectInput(
+            ns("deconvo_tme_parallel"),
+            "Parallel",
+            choices = c("True" = "T", "False" = "F"),
+            selected = "F"
           )
         ),
 
@@ -317,7 +323,10 @@ deconvo_tmeServer <- function(id, external_eset = NULL) {
               arrays = input$deconvo_tme_arrays == "T",
               perm = input$deconvo_tme_perm,
               absolute.mode = input$deconvo_tme_absolute == "T",
-              abs.method = input$deconvo_tme_abs_method
+              abs.method = input$deconvo_tme_abs_method,
+              parallel = input$deconvo_tme_parallel == "T",
+              num_cores = 2,
+              seed = NULL
             )
             
           } else if (method == "epic") {
@@ -332,7 +341,7 @@ deconvo_tmeServer <- function(id, external_eset = NULL) {
             IOBR::deconvo_tme(
               eset = data,
               method = method,
-              arrays = input$deconvo_tme_arrays_x == "T",
+              arrays = input$deconvo_tme_arrays_q == "T",
               tumor = input$deconvo_tme_tumor == "T",
               scale_mrna = input$deconvo_tme_scale_mrna == "T"
             )

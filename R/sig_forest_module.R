@@ -103,21 +103,35 @@ sig_forestBodyUI <- function(id, include_upload = TRUE) {
         ),
 
         sliderInput(
-          ns("Text Size"),
-          "text_size",
+          ns("text_size"),
+          "Text Size",
           min = 0,
           max = 30,
           value = 13,
           step = 1
         ),
 
-        selectInput(
-          ns("color_option"),
-          "Color Option",
-          choices = c("A", "B", "C", "D", "E", "F", "G", "H"),
-          selected = "A",
-          width = NULL
-        )
+        # selectInput(
+        #   ns("color_option"),
+        #   "Color Option",
+        #   choices = c("A", "B", "C", "D", "E", "F", "G", "H"),
+        #   selected = "A",
+        #   width = NULL
+        # ),
+
+        textAreaInput(
+          inputId = ns("sig_forest_custom_cols"),
+          label = "Colors",
+          value = "",
+          placeholder = "e.g., #E64B35, #4DBBD5, #00A087\nSeparate by comma",
+          rows = 3,
+          resize = "vertical"
+        ),
+        br(),
+          tags$p(
+          style = "color: #555; font-style: italic; font-size: 90%; margin-top: -10px;",
+          "Input hex codes or color names separated by comma. If filled, 'Palette' will be ignored."
+          )
       )
     ),
 
@@ -171,6 +185,22 @@ sig_forestServer <- function(id, external_eset = NULL) {
         return(NULL)
       }
 
+      custom_cols_vec <- NULL
+      raw_cols_text <- input$sig_forest_custom_cols
+
+      if (!is.null(raw_cols_text) && trimws(raw_cols_text) != "") {
+        split_cols <- unlist(strsplit(raw_cols_text, "[,;\n]"))
+        split_cols <- trimws(split_cols)
+        custom_cols_vec <- split_cols[split_cols != ""]
+  
+        if (length(custom_cols_vec) == 0) custom_cols_vec <- NULL
+  
+        if (!is.null(custom_cols_vec) && length(custom_cols_vec) < 2) {
+          showNotification("Forest plot colors require at least 2 colors.", type = "error")
+          return(NULL)
+        }
+      }
+
       withProgress(message = "Generating forest plot...", value = 0, {
         setProgress(0.2, message = "Reading data...")
 
@@ -204,8 +234,9 @@ sig_forestServer <- function(id, external_eset = NULL) {
             n              = input$sig_forest_n,
             max_character  = 25,
             discrete_width = 35,
-            color_option   = input$color_option,
-            text.size      = input$text_size
+            # color_option   = input$color_option,
+            text.size      = input$text_size,
+            cols = custom_cols_vec
           )
         }, error = function(e) {
           setProgress(1, message = "Error")

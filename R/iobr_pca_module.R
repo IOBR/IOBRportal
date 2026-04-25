@@ -61,27 +61,6 @@ iobr_pcaBodyUI <- function(id, include_upload = TRUE) {
           )
         ),
 
-        selectInput(
-          inputId = ns("iobr_pca_is.matrix"),
-          label = "Matrix",
-          choices = c("True" = "T", "False" = "F"),
-          selected = "T"
-        ),
-
-        selectInput(
-          inputId = ns("iobr_pca_scale"),
-          label = "Scale",
-          choices = c("True" = "T", "False" = "F"),
-          selected = "T"
-        ),
-
-        selectInput(
-          inputId = ns("iobr_pca_is_log"),
-          label = "Log",
-          choices = c("True" = "T", "False" = "F"),
-          selected = "F"
-        ),
-
         textInput(
           inputId = ns("iobr_pca_id_pdata"),
           label = "ID Column (Pdata)",
@@ -102,6 +81,27 @@ iobr_pcaBodyUI <- function(id, include_upload = TRUE) {
             dropupAuto = FALSE,
             container = "body"
           )
+        ),
+
+        selectInput(
+          inputId = ns("iobr_pca_is.matrix"),
+          label = "Matrix",
+          choices = c("True" = "T", "False" = "F"),
+          selected = "T"
+        ),
+
+        selectInput(
+          inputId = ns("iobr_pca_scale"),
+          label = "Scale",
+          choices = c("True" = "T", "False" = "F"),
+          selected = "T"
+        ),
+
+        selectInput(
+          inputId = ns("iobr_pca_is_log"),
+          label = "Log",
+          choices = c("True" = "T", "False" = "F"),
+          selected = "F"
         ),
 
         selectInput(
@@ -226,7 +226,7 @@ iobr_pcaServer <- function(id, external_eset = NULL) {
       
       # 清洗列名
       all_cols <- gsub("\\.", "-", colnames(pdata))
-      is_num <- sapply(data, is.numeric)
+      is_num <- sapply(pdata, is.numeric)
       non_numeric_cols <- all_cols[!is_num]
       non_numeric_cols <- setdiff(non_numeric_cols, "ID") #只有字符，删去ID列
 
@@ -254,7 +254,7 @@ iobr_pcaServer <- function(id, external_eset = NULL) {
         if(!is.null(data)) colnames(data) <- gsub("\\.", "-", colnames(data))
         if(!is.null(pdata)) colnames(pdata) <- gsub("\\.", "-", colnames(pdata))
         
-        cols_vec <- NULL
+        cols_vec <- "normal"
         raw_cols_text <- input$custom_cols
         
         if (!is.null(raw_cols_text) && trimws(raw_cols_text) != "") {
@@ -265,7 +265,9 @@ iobr_pcaServer <- function(id, external_eset = NULL) {
           # 3. 去除空字符串
           cols_vec <- split_cols[split_cols != ""]
           
-          if(length(cols_vec) == 0) cols_vec <- NULL
+          if (length(split_cols) > 0) {
+           cols_vec <- split_cols
+         }
         }
 
         setProgress(0.5, message = "Calculating PCA...")
@@ -292,12 +294,14 @@ iobr_pcaServer <- function(id, external_eset = NULL) {
           )
         }, error = function(e) {
           setProgress(1, message = "Error")
+          message("Error during iobr_pca(): ", conditionMessage(e))
+          print(e)
           showNotification(
-            paste("Error during iobr_pca():", e$message),
-            type = "error",
-            duration = 8
+          paste("Error during iobr_pca():", conditionMessage(e)),
+          type = "error",
+          duration = 8
           )
-          return(NULL)
+         return(NULL)
         })
         
         req(pp)

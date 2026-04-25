@@ -80,7 +80,7 @@ sig_rocBodyUI <- function(id, include_upload = TRUE) {
             size = 10,
             selectedTextFormat = "count > 2",
             style = "btn-outline-secondary",
-            title = "Select variables...",
+            title = "Please select 2 or more...",
             dropupAuto = FALSE,
             container = "body"
           )
@@ -98,6 +98,20 @@ sig_rocBodyUI <- function(id, include_upload = TRUE) {
           ),
           selected = "jama"
         ),
+
+        textAreaInput(
+          inputId = ns("sig_roc_custom_cols"),
+          label = "Colors",
+          value = "",
+          placeholder = "e.g., #E64B35, #4DBBD5, #00A087\nSeparate by comma",
+          rows = 3,
+          resize = "vertical"
+        ),
+        br(),
+          tags$p(
+          style = "color: #555; font-style: italic; font-size: 90%; margin-top: -10px;",
+          "Input hex codes or color names separated by comma. If filled, 'Palette' will be ignored."
+          ),
 
         # Alpha 滑块
         sliderInput(
@@ -188,7 +202,7 @@ sig_rocServer <- function(id, external_eset = NULL) {
       all_cols <- gsub("\\.", "-", colnames(data))
       is_num <- sapply(data, is.numeric)
       pool_numeric <- all_cols[is_num] # 初始数字池
-      blacklist_pattern <- "time|status|os|event|censored|days|months|years|fustat|futime|rfs|pfs|dfs"
+      blacklist_pattern <- "(^|_)(time|status|os|event|censored|days|months|years|fustat|futime|rfs|pfs|dfs)(_|$)"
       is_clinical <- grepl(blacklist_pattern, pool_numeric, ignore.case = TRUE)
       numeric_cols <- pool_numeric[!is_clinical]
       non_numeric_cols <- grep("time|status", all_cols[is_num], ignore.case = TRUE, value = TRUE)
@@ -228,6 +242,20 @@ sig_rocServer <- function(id, external_eset = NULL) {
         return(NULL)
       }
 
+      custom_cols_vec <- NULL
+        raw_cols_text <- input$sig_roc_custom_cols
+        
+        if (!is.null(raw_cols_text) && trimws(raw_cols_text) != "") {
+          # 1. 按逗号、分号或换行符分割
+          split_cols <- unlist(strsplit(raw_cols_text, "[,;\n]"))
+          # 2. 去除首尾空格
+          split_cols <- trimws(split_cols)
+          # 3. 去除空字符串
+          custom_cols_vec <- split_cols[split_cols != ""]
+          
+          if(length(custom_cols_vec) == 0) custom_cols_vec <- NULL
+        }
+
       withProgress(message = "Running sig_roc analysis...", value = 0, {
         
         data <- input_data()
@@ -244,26 +272,28 @@ sig_rocServer <- function(id, external_eset = NULL) {
 
         # 调用 sig_roc 函数
         # 注意：这里不再需要 gsub 处理括号和逗号，因为 input$variables 已经是向量
-        result <- tryCatch({
-          sig_roc(
-            data = data,
-            response = input$response,
-            variables = input$variables, # 直接传入向量
-            main = if (input$main == "") NULL else input$main,
-            palette = input$palette,
-            alpha = input$alpha,
-            compare = (input$compare == "T"),
-            smooth = (input$smooth == "T"),
-            compare_method = input$compare_method
-          )
-        }, error = function(e) {
-          setProgress(1)
-          showNotification(paste("Error:", e$message), type = "error", duration = 8)
-          return(NULL)
-        })
+args <- tryCatch({
+  list(
+    data = data,
+    response = input$response,
+    variables = input$variables,
+    main = if (input$main == "") NULL else input$main,
+    palette = input$palette,
+    cols = custom_cols_vec,
+    alpha = input$alpha,
+    compare = (input$compare == "T"),
+    smooth = (input$smooth == "T"),
+    compare_method = input$compare_method,
+    fig.path = NULL
+  )
+}, error = function(e) {
+  setProgress(1)
+  showNotification(paste("Error:", e$message), type = "error", duration = 8)
+  return(NULL)
+})
 
-        req(result)
-        plot_result(result) # 保存结果
+req(args)
+plot_result(args) # 保存绘图参数
         
         setProgress(1, message = "Plot ready.")
       })
@@ -271,15 +301,22 @@ sig_rocServer <- function(id, external_eset = NULL) {
 
     dims <- plotDownloadServer(
       id = "plot_download",
-      plot_reactive = plot_result,
+      plot_reactive = reactive({
+        req(plot_result())
+        plot_result()
+      }),
       filename_prefix = "sig_roc_plot"
     )
 
     # --- 2. (Painter) 负责画图的核心逻辑 ---
-    output$plot_output <- renderPlot({
-      req(plot_result())
-      plot_result()
-    })
+    # output$plot_output <- renderPlot({
+    #   req(plot_result())
+    #   print(plot_result())
+    # })
+output$plot_output <- renderPlot({
+  req(plot_result())
+  do.call(sig_roc, plot_result())
+})
 
     # --- 3. (Container) 动态渲染 UI 容器 ---
     output$plot_container <- renderUI({

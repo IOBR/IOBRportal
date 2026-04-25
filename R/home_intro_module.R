@@ -316,6 +316,10 @@ home_introUI <- function(id) {
           tags$div(
             class = "iobr-resource-item",
             HTML("💻 <b>Code Repository:</b> <a href='https://github.com/IOBR/IOBRportal' target='_blank'>https://github.com/IOBR/IOBRportal</a>")
+          ),
+          tags$div(
+            class = "iobr-resource-item",
+            HTML("🌐 <b>Web Portal:</b> <a href='https://iobr.github.io/IOBRportal' target='_blank'>https://iobr.github.io/IOBRportal</a>")
           )
         )
       )

@@ -139,12 +139,26 @@ sig_heatmapBodyUI <- function(id, include_upload = TRUE, show_top_n = FALSE) {
         br(),
           tags$p(
           style = "color: #555; font-style: italic; font-size: 90%; margin-top: -10px;",
-          "Input hex codes or color names separated by comma. If filled, 'Palette' will be ignored."
+          "Input hex codes or color names separated by comma. If filled, 'Palette Group' will be ignored."
           ),
 
-        sliderInput(ns("sig_heatmap_size_col"), "Column Font Size", min = 5, max = 20, value = 10, step = 1),
-        sliderInput(ns("sig_heatmap_size_row"), "Row Font Size", min = 5, max = 20, value = 8, step = 1),
-        sliderInput(ns("sig_heatmap_angle_col"), "Column Text Angle", min = 0, max = 90, value = 90, step = 5)
+        textAreaInput(
+          inputId = ns("custom_heatmap_cols"),
+          label = "Colors Heatmap",
+          value = "",
+          placeholder = "e.g., #E64B35, #4DBBD5, #00A087\nSeparate by comma",
+          rows = 3,
+          resize = "vertical"
+        ),
+        br(),
+          tags$p(
+          style = "color: #555; font-style: italic; font-size: 90%; margin-top: -10px;",
+          "Provide at least 3 colors separated by comma. Used for heatmap low-mid-high values."
+          ),
+
+        # sliderInput(ns("sig_heatmap_size_col"), "Column Font Size", min = 5, max = 20, value = 10, step = 1),
+        # sliderInput(ns("sig_heatmap_angle_col"), "Column Text Angle", min = 0, max = 90, value = 90, step = 5),
+        sliderInput(ns("sig_heatmap_size_row"), "Row Font Size", min = 5, max = 20, value = 8, step = 1)
       )
     ),
 
@@ -172,8 +186,6 @@ sig_heatmapBodyUI <- function(id, include_upload = TRUE, show_top_n = FALSE) {
   )
 }
 
-#size_col、angle_col参数没用
-
 
 # ---- Server ----
 sig_heatmapServer <- function(id, external_eset = NULL, ordered_ids = reactive(NULL)) {
@@ -195,7 +207,7 @@ sig_heatmapServer <- function(id, external_eset = NULL, ordered_ids = reactive(N
       non_numeric_cols <- setdiff(non_numeric_cols, "ID")
 
       pool_numeric <- all_cols[is_num] # 初始数字池
-      blacklist_pattern <- "time|status|os|id|age"
+      blacklist_pattern <- "(^|_)(time|status|os|event|censored|days|months|years|fustat|futime|rfs|pfs|dfs)(_|$)"
       is_clinical <- grepl(blacklist_pattern, pool_numeric, ignore.case = TRUE)
       numeric_cols <- pool_numeric[!is_clinical]
 
@@ -228,8 +240,7 @@ sig_heatmapServer <- function(id, external_eset = NULL, ordered_ids = reactive(N
       top_n_ids <- head(all_ids, n)
       
       # 4. 检查这些 ID 是否在当前表达矩阵里 (防止报错)
-      # 假设 input_data() 的列名已经清洗过
-      valid_ids <- top_n_ids[top_n_ids %in% colnames(input_data())]
+      valid_ids <- top_n_ids[top_n_ids %in% gsub("\\.", "-", colnames(input_data()))]
       
       # 5. 更新下拉框
       if(length(valid_ids) > 0) {
@@ -280,7 +291,6 @@ sig_heatmapServer <- function(id, external_eset = NULL, ordered_ids = reactive(N
 
         cols_vec <- NULL
         raw_cols_text <- input$custom_cols
-        
         if (!is.null(raw_cols_text) && trimws(raw_cols_text) != "") {
           # 1. 按逗号、分号或换行符分割
           split_cols <- unlist(strsplit(raw_cols_text, "[,;\n]"))
@@ -288,8 +298,22 @@ sig_heatmapServer <- function(id, external_eset = NULL, ordered_ids = reactive(N
           split_cols <- trimws(split_cols)
           # 3. 去除空字符串
           cols_vec <- split_cols[split_cols != ""]
-          
           if(length(cols_vec) == 0) cols_vec <- NULL
+        }
+
+        heatmap_cols_vec <- NULL
+        raw_heatmap_cols_text <- input$custom_heatmap_cols
+        if (!is.null(raw_heatmap_cols_text) && trimws(raw_heatmap_cols_text) != "") {
+          split_heatmap_cols <- unlist(strsplit(raw_heatmap_cols_text, "[,;\n]"))
+          split_heatmap_cols <- trimws(split_heatmap_cols)
+          heatmap_cols_vec <- split_heatmap_cols[split_heatmap_cols != ""]
+
+          if (length(heatmap_cols_vec) == 0) heatmap_cols_vec <- NULL
+  
+          if (!is.null(heatmap_cols_vec) && length(heatmap_cols_vec) < 3) {
+            showNotification("Heatmap colors require at least 3 colors.", type = "error")
+            return(NULL)
+          }
         }
 
         setProgress(0.5, message = "Running sig_heatmap...")
@@ -297,15 +321,16 @@ sig_heatmapServer <- function(id, external_eset = NULL, ordered_ids = reactive(N
         pp <- tryCatch({
           sig_heatmap(
             input             = data,
-            ID                = "ID",         
+            id                = "ID",         
             features          = valid_features,
             group             = group_col,      
-            condiction        = NULL,
-            id_condiction     = "vars",
-            col_condiction    = "condiction",
-            cols_condiction   = NULL,
+            condition        = NULL,
+            id_condition     = "vars",
+            col_condition    = "condiction",
+            cols_condition   = NULL,
             scale             = (input$sig_heatmap_scale == "T"),
             palette           = as.numeric(input$sig_heatmap_palette),
+            cols_heatmap      = heatmap_cols_vec,
             palette_group     = input$sig_heatmap_palette_group,
             show_col          = FALSE,
             show_palettes     = FALSE,
@@ -313,9 +338,9 @@ sig_heatmapServer <- function(id, external_eset = NULL, ordered_ids = reactive(N
             show_plot         = FALSE,
             width             = 8,
             height            = 6,
-            size_col          = input$sig_heatmap_size_col,
+            # size_col          = input$sig_heatmap_size_col,
             size_row          = input$sig_heatmap_size_row,
-            angle_col         = input$sig_heatmap_angle_col,
+            # angle_col         = input$sig_heatmap_angle_col,
             column_title      = NULL,
             row_title         = NULL,
             show_heatmap_col_name = FALSE,

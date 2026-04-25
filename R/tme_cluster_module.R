@@ -147,24 +147,24 @@ tme_clusterServer <- function(id, external_eset = NULL, only_table = FALSE) {
     } else {
       uploadServer("upload")
     }
-    
+
     # 2. 监听数据变化，更新 Features 选项
     observeEvent(input_data(), {
       req(input_data())
       data <- input_data()
-    
-      colnames(data) <- gsub("\\.", "-", colnames(data)) # 清洗列名
-      
-      all_cols <- colnames(data) 
+
+      colnames(data) <- gsub("\\.", "-", colnames(data))  # 清洗列名
+
+      all_cols <- colnames(data)
       is_num <- sapply(data, is.numeric)
       pool_numeric <- all_cols[is_num]
-      
+
       # 排除临床列
-      blacklist_pattern <- "time|status|os|age"
+      blacklist_pattern <- "(^|_)(time|status|os|event|censored|days|months|years|fustat|futime|rfs|pfs|dfs)(_|$)"
       is_clinical <- grepl(blacklist_pattern, pool_numeric, ignore.case = TRUE)
-      
-      numeric_cols <- pool_numeric[!is_clinical] 
-      
+
+      numeric_cols <- pool_numeric[!is_clinical]
+
       updatePickerInput(
         session = session,
         inputId = "tme_cluster_features",
@@ -174,56 +174,107 @@ tme_clusterServer <- function(id, external_eset = NULL, only_table = FALSE) {
     })
 
     tme_cluster_result <- reactiveVal(NULL)
+    tme_cluster_plot   <- reactiveVal(NULL)
 
     # 3. 运行分析
     observeEvent(input$run_tme_cluster, {
       req(input_data())
-      data <- input_data() # 获取原始数据
-      
-      colnames(data) <- gsub("\\.", "-", colnames(data)) 
-      
+      data <- input_data()
+
+      colnames(data) <- gsub("\\.", "-", colnames(data))
+
       if (is.null(input$tme_cluster_features) || length(input$tme_cluster_features) == 0) {
         showNotification("Please select at least one feature.", type = "error")
         return(NULL)
       }
 
       withProgress(message = "Running tme_cluster analysis...", value = 0, {
-        setProgress(0.5, message = "Clustering...")
+
+        setProgress(0.3, message = "Clustering...")
 
         result <- tryCatch({
-          # 确保 tme_cluster 函数返回的是一个 data.frame，包含 ID, features, 和 cluster 列
           tme_cluster(
-            input     = data, 
-            features  = input$tme_cluster_features,
-            pattern   = NULL,
-            id        = "ID",
-            method    = "kmeans",
-            min_nc    = input$tme_cluster_min_nc,
-            max.nc    = input$tme_cluster_max_nc
+            input    = data,
+            features = input$tme_cluster_features,
+            pattern  = NULL,
+            id       = "ID",
+            method   = "kmeans",
+            min_nc   = input$tme_cluster_min_nc,
+            max.nc   = input$tme_cluster_max_nc
           )
         }, error = function(e) {
           showNotification(paste("Error:", e$message), type = "error")
           return(NULL)
         })
-        
+
         req(result)
 
         tme_cluster_result(result)
+
+        # 只有 only_table = FALSE 时才生成热图对象
+        if (!isTRUE(only_table)) {
+
+          setProgress(0.7, message = "Generating heatmap...")
+
+          valid_features <- input$tme_cluster_features[
+            input$tme_cluster_features %in% colnames(result)
+          ]
+
+          if (length(valid_features) == 0) {
+            tme_cluster_plot(NULL)
+            showNotification("No valid features found in clustering result.", type = "error")
+            return(NULL)
+          }
+
+          pp <- tryCatch({
+            sig_heatmap(
+              input                 = result,
+              id                    = "ID",
+              features              = valid_features,
+              group                 = "cluster",
+              condition             = NULL,
+              id_condition          = "vars",
+              col_condition         = "condiction",
+              cols_condition        = NULL,
+              scale                 = FALSE,
+              palette               = 2,
+              cols_heatmap          = NULL,
+              palette_group         = "jama",
+              show_col              = FALSE,
+              show_palettes         = FALSE,
+              cols_group            = NULL,
+              show_plot             = FALSE,
+              width                 = 8,
+              height                = 6,
+              size_row              = 8,
+              column_title          = NULL,
+              row_title             = NULL,
+              show_heatmap_col_name = FALSE,
+              path                  = NULL,
+              index                 = 1
+            )
+          }, error = function(e) {
+            showNotification(paste("Heatmap error:", e$message), type = "error")
+            return(NULL)
+          })
+
+          tme_cluster_plot(pp)
+        }
+
         setProgress(1, message = "Finished")
       })
     })
 
     # 4. Outputs
-    
-    # 表格 (Always)
+
+    # 表格
     dataTableServer("tbl_data", tme_cluster_result)
-    
-    # 分组统计文本 (Always - 移出if块，确保两种模式都能看到)
+
+    # 分组统计文本
     output$tme_cluster_cluster <- renderText({
       req(tme_cluster_result())
       res <- tme_cluster_result()
-      
-      # 检查是否有 cluster 列，防止报错
+
       if ("cluster" %in% colnames(res)) {
         cluster_tbl <- table(res$cluster)
         paste0("Group: ", paste(names(cluster_tbl), cluster_tbl, sep = ": ", collapse = "; "))
@@ -232,47 +283,42 @@ tme_clusterServer <- function(id, external_eset = NULL, only_table = FALSE) {
       }
     })
 
-    # 图形 (Conditional - 仅在 only_table=FALSE 时渲染)
-    if (!isTRUE(only_table)) { 
-      
-      # --- 1. 定义绘图逻辑 (Reactive) ---
-      plot_reactive <- reactive({
-        req(tme_cluster_result())
-        sig_heatmap(
-          input    = tme_cluster_result(),
-          features = input$tme_cluster_features, 
-          group    = "cluster"
-        )
-      })
+    # 图形：仅在 only_table = FALSE 时渲染
+    if (!isTRUE(only_table)) {
 
-      # --- 2. 接收下载模块返回的尺寸 (Controller) ---
       dims <- plotDownloadServer(
-        id = "plot_download", 
-        plot_reactive = plot_reactive,
+        id = "plot_download",
+        plot_reactive = tme_cluster_plot,
         filename_prefix = "tme_cluster_heatmap"
       )
 
-      # --- 3. 屏幕绘图 (Painter) ---
       output$tme_cluster_plot <- renderPlot({
-        plot_reactive()
+        req(tme_cluster_plot())
+        tme_cluster_plot()
       })
 
-      # --- 4. 动态容器 (Container) ---
       output$tme_cluster_plot_container <- renderUI({
-        req(plot_reactive())
-        
-        div(style = "overflow: auto;",
-            plotOutput(session$ns("tme_cluster_plot"), 
-                       width = paste0(dims$width(), "px"), 
-                       height = paste0(dims$height(), "px"))
+        req(tme_cluster_plot())
+
+        div(
+          style = "overflow: auto;",
+          plotOutput(
+            session$ns("tme_cluster_plot"),
+            width  = paste0(dims$width(), "px"),
+            height = paste0(dims$height(), "px")
+          )
         )
       })
     }
 
-    # 数据下载 (Always)
-    dataDownloadServer("download", data_reactive = tme_cluster_result, filename_prefix = "tme_cluster_result")
+    # 数据下载
+    dataDownloadServer(
+      "download",
+      data_reactive = tme_cluster_result,
+      filename_prefix = "tme_cluster_result"
+    )
 
-    # 返回结果 (Table)
+    # 返回结果
     return(tme_cluster_result)
   })
 }

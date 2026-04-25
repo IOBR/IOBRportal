@@ -36,15 +36,7 @@ sig_gseaBodyUI <- function(id, include_upload = TRUE) {
         
         if (isTRUE(include_upload)) {
           tagList(
-            fileInput(
-              inputId = ns("iobr_deg_input1"),  
-              label = "Upload Eset", 
-              multiple = FALSE, 
-              accept = NULL, 
-              width = NULL,
-              buttonLabel = "Browse",
-              placeholder = "Choose a file"
-            )%>%
+            uploadUI(ns("iobr_deg_input1"))%>%
               helper(
                 type    = "markdown",
                 icon    = "question-circle",
@@ -53,15 +45,7 @@ sig_gseaBodyUI <- function(id, include_upload = TRUE) {
                 content = "demo_eset_stad"
               ),
             
-            fileInput(
-              inputId = ns("iobr_deg_input2"), 
-              label = "Upload Pdata", 
-              multiple = FALSE, 
-              accept = NULL, 
-              width = NULL,
-              buttonLabel = "Browse",
-              placeholder = "Choose a file"
-            )%>%
+            uploadUI(ns("iobr_deg_input2"))%>%
               helper(
                 type    = "markdown",
                 icon    = "question-circle",
@@ -80,7 +64,7 @@ sig_gseaBodyUI <- function(id, include_upload = TRUE) {
             class = "btn-primary"
           )
         ),
-        
+
         textInput(
           ns("iobr_deg_pdata_id"), 
           "ID (Pdata)", 
@@ -138,7 +122,12 @@ sig_gseaBodyUI <- function(id, include_upload = TRUE) {
         
         selectInput(ns("iobr_deg_array"), "Array", choices = c("True" = "T", "False" = "F"), selected = "F"),
         selectInput(ns("iobr_deg_method"), "Method", choices = c("DESeq2" = "DESeq2", "Limma" = "limma"), selected = "DESeq2"),
-        
+        br(),
+        tags$p(
+          style = "color: #555; font-style: italic; font-size: 90%; margin-top: -10px;",
+          "DESeq2 uses raw counts and Limma uses log2-transformed TPM values."
+        ),
+
         sliderInput(ns("iobr_deg_padj_cutoff"), "Padj Cutoff", min = 0, max = 0.1, value = 0.01, step = 0.01),
         sliderInput(ns("iobr_deg_logfc_cutoff"), "Logfc Cutoff", min = 0, max = 1, value = 0.5, step = 0.01)
       ),
@@ -162,6 +151,27 @@ sig_gseaBodyUI <- function(id, include_upload = TRUE) {
         ),
         
         selectInput(
+          inputId = ns("sig_gsea_palette_gsea"),
+          label = "Palette",
+          choices = c("1", "2", "3", "4"),
+          selected = "2"
+        ),
+
+        textAreaInput(
+          inputId = ns("sig_gsea_custom_cols"),
+          label = "Colors",
+          value = "",
+          placeholder = "e.g., #E64B35, #4DBBD5, #00A087\nSeparate by comma",
+          rows = 3,
+          resize = "vertical"
+        ),
+        br(),
+        tags$p(
+          style = "color: #555; font-style: italic; font-size: 90%; margin-top: -10px;",
+          "Input hex codes or color names separated by comma."
+        ),
+
+        selectInput(
           inputId = ns("calculate_sig_score_signature"),
           label = "Signature",
           choices = c(
@@ -180,13 +190,6 @@ sig_gseaBodyUI <- function(id, include_upload = TRUE) {
           min = 1,   
           max = 50,   
           step = 1    
-        ),
-        
-        selectInput(
-          inputId = ns("sig_gsea_palette_gsea"),
-          label = "Palette",
-          choices = c("1", "2", "3", "4"),
-          selected = "2"
         )
       ),
       dataDownloadUI(ns("download_data"))
@@ -228,52 +231,81 @@ sig_gseaServer <- function(id, external_eset = NULL, external_pdata = NULL) {
     
     iobr_deg_result <- reactiveVal(NULL)
     sig_gsea_result <- reactiveVal(NULL)
+    
+    custom_cols_vec <- reactive({
+      raw_cols_text <- input$sig_gsea_custom_cols
+      out <- NULL
 
+      if (!is.null(raw_cols_text) && trimws(raw_cols_text) != "") {
+        # 1. 按逗号、分号或换行符分割
+        split_cols <- unlist(strsplit(raw_cols_text, "[,;\n]"))
+        # 2. 去除首尾空格
+        split_cols <- trimws(split_cols)
+        # 3. 去除空字符串
+        out <- split_cols[split_cols != ""]
+
+        if (length(out) == 0) out <- NULL
+      }
+
+      out
+    })
     # =======================================================
     # 1. 定义数据源 Reactive
     # =======================================================
     
-    # --- Eset 数据源 ---
-    eset_data <- reactive({
-      if (!is.null(external_eset)) {
-        return(external_eset())
-      }
-      req(input$iobr_deg_input1)
-      eset_ext <- tools::file_ext(input$iobr_deg_input1$name)
-      eset <- tryCatch({
-        if (eset_ext == "csv") {
-          read.csv(input$iobr_deg_input1$datapath, row.names = 1, check.names = FALSE)
-        } else if (eset_ext == "tsv") {
-          read.delim(input$iobr_deg_input1$datapath, row.names = 1, check.names = FALSE)
-        } else {
-          read.table(input$iobr_deg_input1$datapath, row.names = 1, sep = "\t", check.names = FALSE)
-        }
-      }, error = function(e) { return(NULL) })
+    # # --- Eset 数据源 ---
+    # eset_data <- reactive({
+    #   if (!is.null(external_eset)) {
+    #     return(external_eset())
+    #   }
+    #   req(input$iobr_deg_input1)
+    #   eset_ext <- tools::file_ext(input$iobr_deg_input1$name)
+    #   eset <- tryCatch({
+    #     if (eset_ext == "csv") {
+    #       read.csv(input$iobr_deg_input1$datapath, row.names = 1, check.names = FALSE)
+    #     } else if (eset_ext == "tsv") {
+    #       read.delim(input$iobr_deg_input1$datapath, row.names = 1, check.names = FALSE)
+    #     } else {
+    #       read.table(input$iobr_deg_input1$datapath, row.names = 1, sep = "\t", check.names = FALSE)
+    #     }
+    #   }, error = function(e) { return(NULL) })
       
-      if(!is.null(eset)) colnames(eset) <- gsub("\\.", "-", colnames(eset))
-      return(eset)
-    })
+    #   if(!is.null(eset)) colnames(eset) <- gsub("\\.", "-", colnames(eset))
+    #   return(eset)
+    # })
 
-    # --- Pdata 数据源 ---
-    pdata_data <- reactive({
-      if (!is.null(external_pdata)) {
-        return(external_pdata())
-      }
-      req(input$iobr_deg_input2)
-      pdata_ext <- tools::file_ext(input$iobr_deg_input2$name)
-      pdata <- tryCatch({
-        if (pdata_ext == "csv") {
-          read.csv(input$iobr_deg_input2$datapath, header = TRUE, stringsAsFactors = FALSE)
-        } else if (pdata_ext == "tsv") {
-          read.delim(input$iobr_deg_input2$datapath, header = TRUE, stringsAsFactors = FALSE)
-        } else {
-          read.table(input$iobr_deg_input2$datapath, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
-        }
-      }, error = function(e) { return(NULL) })
+    # # --- Pdata 数据源 ---
+    # pdata_data <- reactive({
+    #   if (!is.null(external_pdata)) {
+    #     return(external_pdata())
+    #   }
+    #   req(input$iobr_deg_input2)
+    #   pdata_ext <- tools::file_ext(input$iobr_deg_input2$name)
+    #   pdata <- tryCatch({
+    #     if (pdata_ext == "csv") {
+    #       read.csv(input$iobr_deg_input2$datapath, header = TRUE, stringsAsFactors = FALSE)
+    #     } else if (pdata_ext == "tsv") {
+    #       read.delim(input$iobr_deg_input2$datapath, header = TRUE, stringsAsFactors = FALSE)
+    #     } else {
+    #       read.table(input$iobr_deg_input2$datapath, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+    #     }
+    #   }, error = function(e) { return(NULL) })
       
-      if(!is.null(pdata)) colnames(pdata) <- gsub("\\.", "-", colnames(pdata))
-      return(pdata)
-    })
+    #   if(!is.null(pdata)) colnames(pdata) <- gsub("\\.", "-", colnames(pdata))
+    #   return(pdata)
+    # })
+
+    eset_data <- if (!is.null(external_eset)) {
+      external_eset
+    } else {
+      uploadServer("iobr_deg_input1")
+    }
+
+    pdata_data <- if (!is.null(external_pdata)) {
+      external_pdata
+    } else {
+      uploadServer("iobr_deg_input2")
+    }
 
     # =======================================================
     # 2. 自动更新 UI
@@ -371,7 +403,7 @@ sig_gseaServer <- function(id, external_eset = NULL, external_pdata = NULL) {
         eset  <- eset[, common_ids, drop = FALSE]
         pdata <- pdata[match(colnames(eset), pdata[[p_id_col]]), ]
         rownames(pdata) <- pdata[[p_id_col]]
-        
+
         setProgress(0.5, message = "Running Differential Expression (iobr_deg)...")
         
         # --- 运行 iobr_deg (加 tryCatch) ---
@@ -385,7 +417,8 @@ sig_gseaServer <- function(id, external_eset = NULL, external_pdata = NULL) {
             array = (input$iobr_deg_array == "T"),
             method = input$iobr_deg_method,
             padj_cutoff = input$iobr_deg_padj_cutoff,
-            logfc_cutoff = input$iobr_deg_logfc_cutoff
+            logfc_cutoff = input$iobr_deg_logfc_cutoff,
+            path = NULL
           )
         }, error = function(e) {
           setProgress(1, message = "Error occurred.")
@@ -406,7 +439,10 @@ sig_gseaServer <- function(id, external_eset = NULL, external_pdata = NULL) {
             genesets = get(input$calculate_sig_score_signature),
             palette_gsea = as.numeric(input$sig_gsea_palette_gsea),
             show_gsea = input$sig_gsea_show_gsea,
-            print_bar = FALSE
+            print_bar = FALSE,
+            cols_gsea = custom_cols_vec(),
+            show_plot = FALSE,
+            path = NULL
           )
         }, error = function(e) {
           setProgress(1, message = "Error occurred.")
@@ -436,7 +472,10 @@ sig_gseaServer <- function(id, external_eset = NULL, external_pdata = NULL) {
             genesets = get(input$calculate_sig_score_signature),
             palette_gsea = as.numeric(input$sig_gsea_palette_gsea),
             show_gsea = input$sig_gsea_show_gsea,
-            print_bar = FALSE
+            print_bar = FALSE,
+            cols_gsea = custom_cols_vec(),
+            show_plot = FALSE,
+            path = NULL
           )
         }, error = function(e) {
           setProgress(1, message = "Error occurred.")
@@ -476,7 +515,7 @@ sig_gseaServer <- function(id, external_eset = NULL, external_pdata = NULL) {
       req(sig_gsea_result()) # 确保有结果才渲染
   
       div(style = "overflow: auto;",
-      plotOutput(session$ns("sig_gsea_output"),  # 对应上面 renderPlot 的 ID
+      plotOutput(session$ns("sig_gsea_output"),
                  width = paste0(dims$width(), "px"), 
                  height = paste0(dims$height(), "px"))
       )

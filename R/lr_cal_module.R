@@ -138,9 +138,12 @@ lr_calServer <- function(id, external_eset = NULL) {
             cancer_type = "pancan"
           )
         }, error = function(e) {
+          msg <- conditionMessage(e)
+          print(msg)
+          traceback()
           setProgress(1, message = "Error")
           showNotification(
-            paste("Error during LR_cal():", e$message),
+            paste("Error during LR_cal():", msg),
             type = "error",
             duration = 8
           )

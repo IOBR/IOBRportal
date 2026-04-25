@@ -210,7 +210,7 @@ prepare_immunotherapy_dataServer <- function(id, pool) {
     data_results <- reactiveVal(NULL)
     
     # 1. 读取 Meta 数据
-    meta_file <- "C:/Users/qingcongl/Desktop/IOBRshiny_local/data/immunotherapy/cohorts_meta.xlsx"
+    meta_file <- "data/cohorts_immunotherpy.xlsx"
     
     meta_df <- reactive({
       req(file.exists(meta_file))
@@ -350,6 +350,7 @@ prepare_immunotherapy_dataServer <- function(id, pool) {
             req(input$calculate_sig_score_method)
             setProgress(0.2, message = "Inspecting Signature columns...")
             
+            # 按计算方法后缀匹配
             target_suffix <- input$calculate_sig_score_method 
             
             data_cols <- setdiff(all_columns, c("Dataset", "ID"))

@@ -146,24 +146,29 @@ calculate_sig_scoreServer <- function(id, external_eset = NULL) {
 
         data <- input_data()
         req(nrow(data) > 0)
+        
+        colnames(data) <- gsub("\\.", "-", colnames(data))
 
         setProgress(0.5, message = "Running signature score calculation...")
 
         selected_signature <- input$calculate_sig_score_signature
-        signature_data <- switch(selected_signature,
-          "signature_tme"        = IOBR::signature_tme,
-          "signature_metabolism" = IOBR::signature_metabolism,
-          "signature_collection" = IOBR::signature_collection,
-          "go_bp"    = IOBR::go_bp,
-          "go_cc"    = IOBR::go_cc,
-          "go_mf"    = IOBR::go_mf,
-          "kegg"     = IOBR::kegg,
-          "hallmark" = IOBR::hallmark,
-          "reactome" = IOBR::reactome,
-          "signature_tumor"        = IOBR::signature_tumor,
-        )
+        # signature_data <- switch(selected_signature,
+        #   "signature_tme"        = IOBR::signature_tme,
+        #   "signature_metabolism" = IOBR::signature_metabolism,
+        #   "signature_collection" = IOBR::signature_collection,
+        #   "go_bp"    = IOBR::go_bp,
+        #   "go_cc"    = IOBR::go_cc,
+        #   "go_mf"    = IOBR::go_mf,
+        #   "kegg"     = IOBR::kegg,
+        #   "hallmark" = IOBR::hallmark,
+        #   "reactome" = IOBR::reactome,
+        #   "signature_tumor"        = IOBR::signature_tumor
+        # )
 
         result <- tryCatch({
+
+          signature_data <- IOBR::load_data(selected_signature)
+
           calculate_sig_score(
             eset            = data,
             signature       = signature_data,
@@ -182,7 +187,6 @@ calculate_sig_scoreServer <- function(id, external_eset = NULL) {
         })
         req(result)
 
-        colnames(data) <- gsub("\\.", "-", colnames(data))
         if (is.matrix(result)) result <- as.data.frame(result)
 
         setProgress(1, message = "Finished")

@@ -201,6 +201,7 @@ prepare_othercohort_dataServer <- function(id, pool) {
             req(input$calculate_sig_score_method)
             setProgress(0.2, message = "Inspecting Signature columns...")
             
+            # 按计算方法后缀匹配
             # Construct pattern (e.g., "_PCA$")
             target_pattern <- paste0("_", input$calculate_sig_score_method, "$")
             

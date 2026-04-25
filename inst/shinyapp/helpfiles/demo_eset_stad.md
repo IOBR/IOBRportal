@@ -10,4 +10,4 @@
 
 *Notes:*
 * *Supported Formats: Excel (.xlsx), CSV, TXT, or TSV.*
-* *Excel Specifics: The downloadable template includes an "rowname" header in the first column. Please retain it to prevent "Column Shift".*
+* *Excel Specifics: The downloadable excel template includes an "rowname" header in the first column. Please retain it to prevent "Column Shift".*

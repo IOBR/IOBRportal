@@ -101,8 +101,22 @@ get_corBodyUI <- function(id, include_upload = TRUE) {
           inputId = ns("get_cor_var2"),
           label = "Variable 2",
           choices = NULL, 
-          multiple = FALSE, # 注意：这里是单选
+          multiple = FALSE,
           options = list(placeholder = "Select variable...")
+        ),
+
+                pickerInput(
+          inputId = ns("get_cor_subtype"),
+          label = "Subtype",
+          choices = NULL,       
+          multiple = FALSE, 
+          options = pickerOptions(
+            liveSearch = TRUE,
+            size = 10,
+            style = "btn-outline-secondary",
+            dropupAuto = FALSE,
+            container = "body"
+          )
         ),
 
         selectInput(
@@ -124,20 +138,6 @@ get_corBodyUI <- function(id, include_upload = TRUE) {
           label = "Show Result",
           choices = c("True" = "T", "False" = "F"),
           selected = "T"
-        ),
-
-        pickerInput(
-          inputId = ns("get_cor_subtype"),
-          label = "Subtype",
-          choices = NULL,       
-          multiple = FALSE, 
-          options = pickerOptions(
-            liveSearch = TRUE,
-            size = 10,
-            style = "btn-outline-secondary",
-            dropupAuto = FALSE,
-            container = "body"
-          )
         ),
 
         textInput(
@@ -230,7 +230,6 @@ get_corBodyUI <- function(id, include_upload = TRUE) {
   )
 }
 
-
 # ---- Server ----
 get_corServer <- function(id, external_eset = NULL, target_cols = NULL) {
   moduleServer(id, function(input, output, session) {
@@ -286,7 +285,7 @@ get_corServer <- function(id, external_eset = NULL, target_cols = NULL) {
       # 区分数值列(用于Var1/2) 和 字符列(用于Subtype)
       is_num <- unlist(sapply(data, is.numeric))
       numeric_cols <- all_cols[is_num]
-      numeric_cols <- numeric_cols[!grepl("time|status|os|id", numeric_cols, ignore.case = TRUE)]
+      numeric_cols <- numeric_cols[!grepl("(^|_)(time|status|os|event|censored|days|months|years|fustat|futime|rfs|pfs|dfs)(_|$)", numeric_cols, ignore.case = TRUE)]
       
       non_numeric_cols <- all_cols[!is_num]
       non_numeric_cols <- setdiff(non_numeric_cols, "ID")
@@ -308,6 +307,7 @@ get_corServer <- function(id, external_eset = NULL, target_cols = NULL) {
       
       # 锁定 Var1 只能选 Signature
       sig_pool <- intersect(all_numeric_cols, names(signature_collection))
+      sig_pool <- unique(c(sig_pool, "TMEscore_plus", "TMEscore_CIR"))
       
       updateSelectizeInput(
         session, 
@@ -333,7 +333,7 @@ get_corServer <- function(id, external_eset = NULL, target_cols = NULL) {
         all_numeric_cols <- gsub("\\.", "-", colnames(data))
         is_num <- unlist(sapply(data, is.numeric))
         numeric_cols_only <- all_numeric_cols[is_num]
-        blacklist <- c("ID", "time", "status", "os", "TMEscor_CIR", "TMEscore_plus") # (这里用正则过滤更彻底)
+        blacklist <- "(^|_)(time|status|os|event|censored|days|months|years|fustat|futime|rfs|pfs|dfs|TMEscore_plus|TMEscore_CIR)(_|$)"
         clean_numeric_cols <- numeric_cols_only[!grepl(paste(blacklist, collapse="|"), numeric_cols_only, ignore.case = TRUE)]
         gene_pool <- setdiff(clean_numeric_cols, sig_pool)
         
@@ -423,7 +423,9 @@ get_corServer <- function(id, external_eset = NULL, target_cols = NULL) {
             title_size      = input$get_cor_title_size,
             text_size       = input$get_cor_text_size,
             axis_angle      = input$get_cor_axis_angle,
-            hjust           = input$get_cor_hjust
+            hjust           = input$get_cor_hjust,
+            path = NULL,
+            save_plot = FALSE
           )
         }, error = function(e) {
           setProgress(1, message = "Error")

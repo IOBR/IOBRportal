@@ -139,12 +139,13 @@ find_outlier_samplesServer <- function(id, external_eset = NULL) {
         tryCatch({
           # 调用函数 (直接画图，不返回 Plot 对象，需 recordPlot 捕获)
           # 注意：find_outlier_samples 返回的是异常样本的名称向量
-          outliers_vec <- IOBR::find_outlier_samples(
+          outliers_vec <- find_outlier_samples(
             eset        = data,
             yinter      = -3,
-            project     = "find_outlier_samples_project",
+            project     = NULL,
             plot_hculst = FALSE,
-            show_plot   = TRUE
+            show_plot   = TRUE,
+            save        = FALSE
           )
           
           # 捕获图像

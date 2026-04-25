@@ -118,6 +118,20 @@ get_cor_matrixBodyUI <- function(id, include_upload = TRUE) {
           )
         ),
 
+        textAreaInput(
+          inputId = ns("get_cor_matrix_cols"),
+          label = "Heatmap Colors",
+          value = "",
+          placeholder = "e.g., #E64B35, #4DBBD5, #00A087\nSeparate by comma",
+          rows = 3,
+          resize = "vertical"
+        ),
+        br(),
+        tags$p(
+          style = "color: #555; font-style: italic; font-size: 90%; margin-top: -10px;",
+          "Provide 2 or 3 colors separated by comma. 2 colors = low/high (mid=white); 3 colors = low/mid/high."
+        ),
+
         selectInput(
           inputId = ns("get_cor_matrix_scale"),
           label = "Scale",
@@ -134,19 +148,19 @@ get_cor_matrixBodyUI <- function(id, include_upload = TRUE) {
 
         sliderInput(
           inputId = ns("get_cor_matrix_font.size.star"),
-          label = "font.size.star",
+          label = "Font Size Star",
           min = 0, max = 20, value = 8, step = 0.5
         ),
 
         sliderInput(
           inputId = ns("get_cor_matrix_font.size"),
-          label = "font.size",
+          label = "Font Size",
           min = 0, max = 30, value = 15, step = 1
         ),
 
         selectInput(
           inputId = ns("get_cor_matrix_fill_by_cor"),
-          label = "fill_by_cor",
+          label = "Fill by cor",
           choices = c("True" = "T", "False" = "F"),
           selected = "F"
         )
@@ -169,6 +183,10 @@ get_cor_matrixBodyUI <- function(id, include_upload = TRUE) {
           tabPanel(
             "Plot", 
             plotDownloadUI(ns("plot_download")),
+            tags$p(
+            style = "color: #666; font-size: 90%;",
+            "Tip: Minimum width is set to 500 px for better visualization of the correlation matrix."
+            ),
             uiOutput(ns("get_cor_matrix_plot_container"))
           )
         )
@@ -176,7 +194,6 @@ get_cor_matrixBodyUI <- function(id, include_upload = TRUE) {
     )
   )
 }
-
 
 # ---- Server ----
 get_cor_matrixServer <- function(id, external_eset = NULL, target_cols = NULL) {
@@ -226,7 +243,7 @@ get_cor_matrixServer <- function(id, external_eset = NULL, target_cols = NULL) {
       # 提取数值列
       is_num <- unlist(sapply(data, is.numeric))
       numeric_cols <- all_cols[is_num]
-      numeric_cols <- numeric_cols[!grepl("time|status|os|id", numeric_cols, ignore.case = TRUE)]
+      numeric_cols <- numeric_cols[!grepl("(^|_)(time|status|os|event|censored|days|months|years|fustat|futime|rfs|pfs|dfs)(_|$)", numeric_cols, ignore.case = TRUE)]
 
       # 初始化两个框
       updateSelectizeInput(session, "get_cor_matrix_feas1", choices = numeric_cols, selected = character(0), server = TRUE)
@@ -242,7 +259,8 @@ get_cor_matrixServer <- function(id, external_eset = NULL, target_cols = NULL) {
       
       # 仅保留 Signature 名字
       sig_pool <- intersect(all_numeric_cols, names(signature_collection))
-      
+      sig_pool <- unique(c(sig_pool, "TMEscore_plus", "TMEscore_CIR"))
+
       updateSelectizeInput(
         session, 
         "get_cor_matrix_feas1", 
@@ -269,7 +287,7 @@ get_cor_matrixServer <- function(id, external_eset = NULL, target_cols = NULL) {
         all_numeric_cols <- gsub("\\.", "-", colnames(data))
         is_num <- unlist(sapply(data, is.numeric))
         numeric_cols_only <- all_numeric_cols[is_num]
-        blacklist <- c("ID", "time", "status", "os", "TMEscor_CIR", "TMEscore_plus") # (这里用正则过滤更彻底)
+        blacklist <- "(^|_)(time|status|os|event|censored|days|months|years|fustat|futime|rfs|pfs|dfs|TMEscore_plus|TMEscore_CIR)(_|$)"
         clean_numeric_cols <- numeric_cols_only[!grepl(paste(blacklist, collapse="|"), numeric_cols_only, ignore.case = TRUE)]
         gene_pool <- setdiff(clean_numeric_cols, sig_pool)
 
@@ -286,7 +304,7 @@ get_cor_matrixServer <- function(id, external_eset = NULL, target_cols = NULL) {
           session, 
           "get_cor_matrix_feas2", 
           choices = gene_pool,     
-          selected = valid_genes, # 自动勾选所有相关基因
+          selected = character(0), # 不再自动勾选所有相关基因
           server = TRUE
         )
       }
@@ -306,6 +324,21 @@ get_cor_matrixServer <- function(id, external_eset = NULL, target_cols = NULL) {
         return(NULL)
       }
 
+      cols_vec <- NULL
+      raw_cols_text <- input$get_cor_matrix_cols
+      if (!is.null(raw_cols_text) && trimws(raw_cols_text) != "") {
+        split_cols <- unlist(strsplit(raw_cols_text, "[,;\n]"))
+        split_cols <- trimws(split_cols)
+        cols_vec <- split_cols[split_cols != ""]
+  
+        if (length(cols_vec) == 0) cols_vec <- NULL
+  
+        if (!is.null(cols_vec) && !(length(cols_vec) %in% c(2, 3))) {
+          showNotification("Please provide 2 or 3 colors for Heatmap Colors.", type = "error")
+          return(NULL)
+        }
+      }
+
       withProgress(message = "Running get_cor_matrix...", value = 0, {
         setProgress(0.2, message = "Reading data...")
 
@@ -315,6 +348,13 @@ get_cor_matrixServer <- function(id, external_eset = NULL, target_cols = NULL) {
 
         feas1 <- input$get_cor_matrix_feas1
         feas2 <- input$get_cor_matrix_feas2
+        
+        # workflow 模式下交换 x / y
+        if (isTRUE(target_cols)) {
+          tmp  <- feas1
+          feas1 <- feas2
+          feas2 <- tmp
+        }
         
         req_cols <- c(feas1, feas2)
         if (!all(req_cols %in% colnames(data))) {
@@ -329,12 +369,14 @@ get_cor_matrixServer <- function(id, external_eset = NULL, target_cols = NULL) {
             data             = data,
             feas1            = feas1, 
             feas2            = feas2, 
+            cols             = cols_vec,
             method           = input$get_cor_matrix_method,
             is.matrix        = input$get_cor_matrix_is_matrix == "T",
             scale            = input$get_cor_matrix_scale == "T",
             font.size.star   = input$get_cor_matrix_font.size.star,
             font.size        = input$get_cor_matrix_font.size,
-            fill_by_cor      = input$get_cor_matrix_fill_by_cor == "T"
+            fill_by_cor      = input$get_cor_matrix_fill_by_cor == "T",
+            path = NULL
           )
         }, error = function(e) {
           setProgress(1, message = "Error")
@@ -368,10 +410,13 @@ get_cor_matrixServer <- function(id, external_eset = NULL, target_cols = NULL) {
     output$get_cor_matrix_plot_container <- renderUI({
       req(get_cor_matrix_result())
       
+      plot_width  <- max(500, dims$width())
+      plot_height <- dims$height()
+
       div(style = "overflow: auto;",
           plotOutput(session$ns("get_cor_matrix_plot_output"), 
-                     width = paste0(dims$width(), "px"), 
-                     height = paste0(dims$height(), "px"))
+                     width  = paste0(plot_width, "px"),
+                     height = paste0(plot_height, "px"))
       )
     })
 

@@ -108,7 +108,7 @@ surv_groupBodyUI <- function(id, include_upload = TRUE) {
         selectInput(
           inputId = ns("surv_group_time_type"),
           label = "Time Type",
-          choices = c("Years", "Months", "Days"),
+          choices = c("Months" = "month", "Days" = "day"),
           selected = "Months"
         ),
 
@@ -192,7 +192,7 @@ surv_groupServer <- function(id, external_eset = NULL) {
       group_cols <- setdiff(group_cols, "ID") #只有字符，删去ID列
 
       pool_numeric <- all_cols[is_num] # 初始数字池
-      blacklist_pattern <- "time|status|os|event|censored|days|months|years|fustat|futime|rfs|pfs|dfs"
+      blacklist_pattern <- "(^|_)(time|status|os|event|censored|days|months|years|fustat|futime|rfs|pfs|dfs)(_|$)"
       is_clinical <- grepl(blacklist_pattern, pool_numeric, ignore.case = TRUE)
       numeric_cols <- pool_numeric[!is_clinical]
       non_numeric_cols <- grep("time|status", all_cols[is_num], ignore.case = TRUE, value = TRUE)
@@ -254,7 +254,8 @@ surv_groupServer <- function(id, external_eset = NULL) {
             time_type         = input$surv_group_time_type,
             palette           = input$surv_group_palette,
             cols = cols_vec,
-            font.size.table   = input$surv_group_font.size.table
+            font.size.table   = input$surv_group_font.size.table,
+            save_path = NULL
           )
         }, error = function(e) {
           setProgress(1, message = "Error")

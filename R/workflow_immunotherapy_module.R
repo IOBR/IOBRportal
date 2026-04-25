@@ -5,7 +5,7 @@ workflow_immunotherapyUI <- function(id) {
     tabName = "workflow_immunotherapy",
 
     h3(HTML(
-      "Immunotherapy Cohorts Workflow
+      "IMMC Workflow
       <span style='font-size:80%; color:#333;'>:
        Database-driven Pipeline for Signature Scoring, TME Deconvolution, and Some Downstream Analysis.</span>"
     )) %>%
@@ -45,32 +45,32 @@ workflow_immunotherapyUI <- function(id) {
           tabPanel("Cell Bar Plot", cell_bar_plotBodyUI(ns("mod_cellbar"), include_upload = FALSE))
         )
       ),
-      
-      tabPanel(
-        title = "Part 3 · Correlation",
-        icon = icon("project-diagram"),
-        br(),
-        tabsetPanel(
-          id = ns("tabs_part3"),
-          type = "tabs",
-          tabPanel("Batch Correlation",   batch_corBodyUI(ns("mod_batch_cor"), include_upload = FALSE)),
-          tabPanel("Partial Correlation", batch_pccBodyUI(ns("mod_pcc"), include_upload = FALSE)),
-          tabPanel("Single Correlation",  get_corBodyUI(ns("mod_single_cor"), include_upload = FALSE)),
-          tabPanel("Correlation Matrix",  get_cor_matrixBodyUI(ns("mod_cor_matrix"), include_upload = FALSE))
-        )
-      ),
 
       tabPanel(
-        title = "Part 4 · Group Comparison",
+        title = "Part 3 · Group Comparison",
         icon = icon("chart-bar"),
         br(),
         tabsetPanel(
-          id = ns("tabs_part4"),
+          id = ns("tabs_part3"),
           type = "tabs",
           tabPanel("Wilcoxon Test", batch_wilcoxonBodyUI(ns("mod_wilcoxon"), include_upload = FALSE)),
           tabPanel("Kruskal Test",  batch_kruskalBodyUI(ns("mod_kruskal"), include_upload = FALSE)),
           tabPanel("Heatmap", sig_heatmapBodyUI(ns("mod_group_heatmap"), include_upload = FALSE, show_top_n = TRUE)),
           tabPanel("Box Plot",      sig_boxBodyUI(ns("mod_box_stat"), include_upload = FALSE))
+        )
+      ),
+      
+      tabPanel(
+        title = "Part 4 · Correlation",
+        icon = icon("project-diagram"),
+        br(),
+        tabsetPanel(
+          id = ns("tabs_part4"),
+          type = "tabs",
+          tabPanel("Batch Correlation",   batch_corBodyUI(ns("mod_batch_cor"), include_upload = FALSE)),
+          tabPanel("Partial Correlation", batch_pccBodyUI(ns("mod_pcc"), include_upload = FALSE)),
+          tabPanel("Single Correlation",  get_corBodyUI(ns("mod_single_cor"), include_upload = FALSE)),
+          tabPanel("Correlation Matrix",  get_cor_matrixBodyUI(ns("mod_cor_matrix"), include_upload = FALSE))
         )
       )
     )
@@ -145,13 +145,7 @@ workflow_immunotherapyServer <- function(id, pool) {
       }
     })
     cell_bar_plotServer("mod_cellbar", external_eset = res_for_cellbar)
-    
-    # Correlation
-    batch_corServer("mod_batch_cor", external_eset = res_final_combined)
-    batch_pccServer("mod_pcc", external_eset = res_final_combined)
-    get_corServer("mod_single_cor", external_eset = res_final_combined)
-    get_cor_matrixServer("mod_cor_matrix", external_eset = res_final_combined)
-    
+
     # Comparison
     # batch_wilcoxonServer("mod_wilcoxon", external_eset = res_final_combined)
     # batch_kruskalServer("mod_kruskal", external_eset = res_final_combined)
@@ -182,6 +176,12 @@ workflow_immunotherapyServer <- function(id, pool) {
     })
     sig_heatmapServer("mod_group_heatmap", external_eset = res_final_combined, ordered_ids = group_sig_ids)
     sig_boxServer("mod_box_stat", external_eset = res_final_combined)
+    
+    # Correlation
+    batch_corServer("mod_batch_cor", external_eset = res_final_combined)
+    batch_pccServer("mod_pcc", external_eset = res_final_combined)
+    get_corServer("mod_single_cor", external_eset = res_final_combined)
+    get_cor_matrixServer("mod_cor_matrix", external_eset = res_final_combined)
     
   })
 }

@@ -126,7 +126,7 @@ cell_bar_plotBodyUI <- function(id, include_upload = TRUE) {
         ),
 
         selectInput(
-          ns("cell_bar_plot_coord_filp"),
+          ns("cell_bar_plot_coord_flip"),
           label = "Coord Flip",
           choices = c("True" = "T", "False" = "F"),
           selected = "T"
@@ -173,17 +173,28 @@ cell_bar_plotServer <- function(id, external_eset = NULL) {
     observeEvent(input_data(), {
       req(input_data())
       data <- input_data()
-
-      all_cols <- gsub("\\.", "-", colnames(data))
-      is_num <- sapply(data, is.numeric)
+      cat("===== 数据结构 =====\n")
+  print(str(data))
+  cat("===== 每列类型 =====\n")
+  print(sapply(data, class))
+      
+      all_cols <- colnames(data)
+      is_num <- sapply(data, function(x) {
+    is.numeric(x) || all(!is.na(suppressWarnings(as.numeric(x))))
+    })
+      cat("===== is_num =====\n")
+      print(is_num)
+      
       pool_numeric <- all_cols[is_num] # 初始数字池
       
-      blacklist_pattern <- "time|status|os"
+      blacklist_pattern <- "(^|_)time|status|os|id(_|$)"
       is_clinical <- grepl(blacklist_pattern, pool_numeric, ignore.case = TRUE)
       
       numeric_cols <- pool_numeric[!is_clinical]      # 纯特征 (Features)
       non_numeric_cols <- setdiff(all_cols, numeric_cols) # ID / Clinical
       
+      print(numeric_cols)  # 🔍 debug
+
       # 更新 Features 下拉框
       updatePickerInput(
         session = session,
@@ -246,7 +257,7 @@ cell_bar_plotServer <- function(id, external_eset = NULL) {
             cols = cols_vec,
             title           = input$cell_bar_plot_title,
             legend.position = input$cell_bar_plot_legend.position,
-            coord_filp      = input$cell_bar_plot_coord_filp == "T",
+            coord_flip      = input$cell_bar_plot_coord_flip == "T",
             palette         = as.numeric(input$cell_bar_plot_palette)
           )
         }, error = function(e) {

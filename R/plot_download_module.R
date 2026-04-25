@@ -62,6 +62,8 @@ plotDownloadServer <- function(id, plot_reactive, filename_prefix = "plot", plot
         current_type <- "get_cor" 
       } else if (grepl("heatmap", fname)) {
         current_type <- "heatmap"
+      } else if (grepl("sig_roc", fname)) {
+        current_type <- "sig_roc"
       } else {
         current_type <- "default"
       }
@@ -87,6 +89,7 @@ plotDownloadServer <- function(id, plot_reactive, filename_prefix = "plot", plot
         "time_roc"       = c(w = 500,  h = 400),
         "surv_group"     = c(w = 500,  h = 450),
         "get_cor"        = c(w = 450,  h = 400),
+        "sig_roc"        = c(w = 450,  h = 450),
         "default"        = c(w = 600,  h = 450)
       )
       
@@ -130,12 +133,27 @@ plotDownloadServer <- function(id, plot_reactive, filename_prefix = "plot", plot
             n_rows <- dims$r
             n_cols <- dims$c
           } else {
-            # 备用
+            # if (inherits(p, "ggplot") && !is.null(p$data)) {
+            #   n_rows <- length(unique(p$data[[1]])) 
+            #   n_cols <- length(unique(p$data[[2]]))
+            # } else {
+            #   n_rows <- 10; n_cols <- 10 
+            # }
+
             if (inherits(p, "ggplot") && !is.null(p$data)) {
-              n_rows <- length(unique(p$data[[1]])) 
-              n_cols <- length(unique(p$data[[2]]))
+              if (type == "get_cor_matrix") {
+    
+                # 关键：交换 row / col 计算逻辑
+                n_cols <- length(unique(p$data[[1]]))  # x → 宽
+                n_rows <- length(unique(p$data[[2]]))  # y → 高
+    
+              } else {
+                n_rows <- length(unique(p$data[[1]])) 
+                n_cols <- length(unique(p$data[[2]]))
+              }
             } else {
-              n_rows <- 10; n_cols <- 10 
+              n_rows <- 10
+              n_cols <- 10
             }
           }
 
@@ -143,9 +161,9 @@ plotDownloadServer <- function(id, plot_reactive, filename_prefix = "plot", plot
           
           if (type == "get_cor_matrix") {
              # [情况1：相关性矩阵]
-             # 单独设置：25px * 25px (正方形大格子)
-             row_px <- 15
-             col_px <- 15
+             # 单独设置：20px * 20px (正方形大格子)
+             row_px <- 20
+             col_px <- 20
              
           } else {
              # [情况2：普通热图]
@@ -159,7 +177,7 @@ plotDownloadServer <- function(id, plot_reactive, filename_prefix = "plot", plot
           
           # 3. 限制范围
           h <- max(300, min(h, 1500)) 
-          w <- max(200, min(w, 1500))
+          w <- max(200, min(w, 1000))
           
         }, silent = TRUE)
         
@@ -223,8 +241,14 @@ plotDownloadServer <- function(id, plot_reactive, filename_prefix = "plot", plot
           ggsave(file, plot = p, device = "pdf", width = w_in, height = h_in)
         } else if (inherits(p, "Heatmap") || inherits(p, "HeatmapList")) { 
           pdf(file, width = w_in, height = h_in); tryCatch({ draw(p) }, error = function(e) { print(p) }); dev.off()
+        } else if (inherits(p, "recordedplot")) {
+          pdf(file, width = w_in, height = h_in)
+          on.exit(dev.off(), add = TRUE)
+          replayPlot(p)
         } else {
-          pdf(file, width = w_in, height = h_in); print(p); dev.off()
+          pdf(file, width = w_in, height = h_in)
+          on.exit(dev.off(), add = TRUE)
+          print(p)
         }
       }
     )

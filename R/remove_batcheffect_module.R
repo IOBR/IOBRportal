@@ -154,8 +154,8 @@ remove_batcheffectServer <- function(id, external_eset = NULL) {
         run_success <- FALSE
 
         tryCatch({
-          # 3. 运行分析函数 (它会产生副作用：画图)
-          result_data <- IOBR::remove_batcheffect(
+          # 3. 运行分析函数
+          result_data <- remove_batcheffect(
             eset1       = d1,
             eset2       = d2,
             eset3       = d3,
@@ -167,7 +167,7 @@ remove_batcheffectServer <- function(id, external_eset = NULL) {
             check_eset  = TRUE,
             adjust_eset = TRUE,
             repel       = FALSE,
-            path        = "Result_PCA" 
+            path        = NULL 
           )
           
           # 4. 捕获当前设备上的图像
