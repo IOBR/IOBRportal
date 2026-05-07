@@ -61,7 +61,7 @@ This workflow is designed for TCGA cohort analysis and supports:
 - correlation analysis
 - group comparison
 
-### 2. MOOLC
+### 2. MOLC
 
 This workflow is designed for curated cancer cohort datasets and supports:
 
