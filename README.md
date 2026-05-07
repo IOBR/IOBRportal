@@ -3,7 +3,7 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
-IOBRportal is an R package and Shiny-based web platform for bulk transcriptome and immuno-oncology studies. It integrates signature score calculation, TME deconvolution, clustering, visualization, mutation analysis, signature-gene correlation analysis and cohort-oriented workflows into a unified analysis environment. More information is available in the IOBRportal Book：https://qingcongl.github.io/IOBRportal_book/. Access the application here: https://iobr.github.io/IOBRportal/.
+IOBRportal is an R package and Shiny-based web platform for bulk transcriptome and immuno-oncology studies. It integrates signature score calculation, TME deconvolution, clustering, visualization, mutation analysis, signature-gene correlation analysis and cohort-oriented workflows into a unified analysis environment. More information is available in the [IOBRportal Book](https://qingcongl.github.io/IOBRportal_book/). Access the application here: https://iobr.github.io/IOBRportal/.
 
 <p align="center">
   <img src="man/figures/IOBRportal.png" width="180">
