@@ -16,6 +16,11 @@ plotDownloadUI <- function(id) {
       # 3. 下载按钮 (利用 margin-top 让按钮和输入框底部对齐)
       column(3, style = "margin-top: 32px;", downloadButton(ns("download"), "Download Plot", class = "btn-primary btn-block") 
       )
+    ),
+    br(),
+    tags$p(
+      style = "color: #555; font-style: italic; font-size: 90%; margin-top: -10px; margin-bottom: 0px;",
+      "You can manually adjust the width and height to resize the plot as needed."
     )
   )
 }
@@ -86,10 +91,10 @@ plotDownloadServer <- function(id, plot_reactive, filename_prefix = "plot", plot
         "percent_bar"    = c(w = 500,  h = 400),
         "sig_forrest"    = c(w = 550,  h = 300),
         "surv"           = c(w = 1000, h = 500),
-        "time_roc"       = c(w = 500,  h = 400),
+        "time_roc"       = c(w = 550,  h = 400),
         "surv_group"     = c(w = 500,  h = 450),
-        "get_cor"        = c(w = 450,  h = 400),
-        "sig_roc"        = c(w = 450,  h = 450),
+        "get_cor"        = c(w = 500,  h = 400),
+        "sig_roc"        = c(w = 500,  h = 500),
         "default"        = c(w = 600,  h = 450)
       )
       
@@ -160,24 +165,43 @@ plotDownloadServer <- function(id, plot_reactive, filename_prefix = "plot", plot
           # --- 【像素计算：区分对待】 ---
           
           if (type == "get_cor_matrix") {
-             # [情况1：相关性矩阵]
-             # 单独设置：20px * 20px (正方形大格子)
-             row_px <- 20
-             col_px <- 20
-             
-          } else {
-             # [情况2：普通热图]
-             row_px <- 10 
-             col_px <- 15 
-          }
 
-          # 2. 计算总尺寸
-          h <- 200 + (n_rows * row_px) 
-          w <- 200 + (n_cols * col_px)
+  row_px <- 35
+  col_px <- 45
+
+  x_labs <- character(0)
+  y_labs <- character(0)
+
+  if (inherits(p, "ggplot") && !is.null(p$data)) {
+    x_labs <- as.character(unique(p$data[[1]]))
+    y_labs <- as.character(unique(p$data[[2]]))
+  }
+
+  max_x_lab <- if (length(x_labs) > 0) max(nchar(x_labs), na.rm = TRUE) else 20
+  max_y_lab <- if (length(y_labs) > 0) max(nchar(y_labs), na.rm = TRUE) else 20
+
+  bottom_margin_px <- max(220, max_x_lab * 9)
+  left_margin_px   <- max(220, max_y_lab * 9)
+
+  h <- bottom_margin_px + 120 + (n_rows * row_px)
+  w <- left_margin_px + 180 + (n_cols * col_px)
+
+  h <- max(400, min(h, 3000))
+  w <- max(600, min(w, 4000))
+
+} else {
+
+  row_px <- 10 
+  col_px <- 15 
+
+  h <- 200 + (n_rows * row_px) 
+  w <- 200 + (n_cols * col_px)
+
+  h <- max(400, min(h, 2000)) 
+  w <- max(300, min(w, 2000))
+}
+
           
-          # 3. 限制范围
-          h <- max(300, min(h, 1500)) 
-          w <- max(200, min(w, 1000))
           
         }, silent = TRUE)
         
@@ -195,11 +219,11 @@ plotDownloadServer <- function(id, plot_reactive, filename_prefix = "plot", plot
             
             if(is_flipped) {
               # 翻转后：高度随条目增加，宽度固定 400
-              h <- max(200, 100 + (n_bars * 15)) 
+              h <- max(300, 100 + (n_bars * 15)) 
               w <- 700
             } else {
               # 未翻转：宽度随条目增加，高度固定 400
-              w <- max(200, 150 + (n_bars * 15))
+              w <- max(300, 150 + (n_bars * 15))
               h <- 700
             }
             
@@ -221,8 +245,8 @@ plotDownloadServer <- function(id, plot_reactive, filename_prefix = "plot", plot
       
       dims <- get_dims_logic(p, current_type)
       
-      updateNumericInput(session, "screen_w", value = dims$w)
-      updateNumericInput(session, "screen_h", value = dims$h)
+      updateNumericInput(session, "screen_w", value = if (current_type == "get_cor_matrix") max(600, dims$w) else  dims$w)
+      updateNumericInput(session, "screen_h", value = if (current_type == "get_cor_matrix") max(400, dims$h) else dims$h)
     })
 
     # -------------------------------------------------------------
@@ -237,18 +261,30 @@ plotDownloadServer <- function(id, plot_reactive, filename_prefix = "plot", plot
         w_in <- (if(is.numeric(input$screen_w)) input$screen_w else 600) / 72
         h_in <- (if(is.numeric(input$screen_h)) input$screen_h else 400) / 72
         
+        # if (inherits(p, "ggplot")) {
+        #   ggsave(file, plot = p, device = "pdf", width = w_in, height = h_in)
+        # } 
         if (inherits(p, "ggplot")) {
-          ggsave(file, plot = p, device = "pdf", width = w_in, height = h_in)
+          pdf(file, width = w_in, height = h_in, useDingbats = FALSE)
+          print(p) # 将 ggplot 对象直接 print 到 pdf 设备中
+          dev.off()
         } else if (inherits(p, "Heatmap") || inherits(p, "HeatmapList")) { 
           pdf(file, width = w_in, height = h_in); tryCatch({ draw(p) }, error = function(e) { print(p) }); dev.off()
         } else if (inherits(p, "recordedplot")) {
           pdf(file, width = w_in, height = h_in)
           on.exit(dev.off(), add = TRUE)
           replayPlot(p)
+        } else if (current_type == "sig_roc") {
+         pdf(file, width = w_in, height = h_in)
+         on.exit(dev.off(), add = TRUE)
+
+         p$fig.path <- NULL
+         do.call(sig_roc, p)
+
         } else {
           pdf(file, width = w_in, height = h_in)
-          on.exit(dev.off(), add = TRUE)
-          print(p)
+         on.exit(dev.off(), add = TRUE)
+         print(p)
         }
       }
     )

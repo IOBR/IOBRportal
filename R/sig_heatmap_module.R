@@ -113,7 +113,7 @@ sig_heatmapBodyUI <- function(id, include_upload = TRUE, show_top_n = FALSE) {
         selectInput(
           ns("sig_heatmap_palette"),
           label = "Palette",
-          choices = c("1", "2", "3", "4"),
+          choices = c("1", "2", "3", "4", "5", "6"),
           selected = "2"
         ),
 

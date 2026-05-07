@@ -105,13 +105,12 @@ dataTableServer <- function(id, data, max_cols = reactive(100), max_rows = react
           lengthMenu = c(10, 25, 50, 100), # 允许用户改变每页显示数量
           deferRender = TRUE,
           autoWidth = FALSE,
-          columnDefs = my_defs,
-          server = TRUE # 显式声明开启服务端模式
+          columnDefs = my_defs
         ),
         rownames = TRUE,
         escape = FALSE,
         class = "stripe hover compact"
       )
-    })
+    }, server = TRUE) # 显式声明开启服务端模式
   })
 }

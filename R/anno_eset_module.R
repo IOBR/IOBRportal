@@ -41,7 +41,7 @@ anno_esetBodyUI <- function(id, include_upload = TRUE) {
                 icon    = "question-circle",
                 size    = "m",
                 colour  = "#007bff",
-                content = "demo_eset_stad"
+                content = "demo_stad_probe"
               )
           )
         },
@@ -136,8 +136,26 @@ anno_esetServer <- function(id, external_eset = NULL) {
         req(nrow(data) > 0)
 
         annotation_file <- input$anno_eset_annotation
-        data(list = annotation_file, package = "IOBR", envir = environment())
-        annotation_data <- get(annotation_file, envir = environment())
+        
+        # [修改] ----------------------------------------------------
+        setProgress(0.3, message = paste0("Loading annotation: ", annotation_file, "..."))
+        
+        annotation_data <- tryCatch({
+          # 使用load_data
+          IOBR::load_data(annotation_file)
+        }, error = function(e) {
+          setProgress(1, message = "Error")
+          showNotification(
+            paste("Failed to load annotation data from GitHub/Cache:", e$message),
+            type = "error",
+            duration = 10
+          )
+          return(NULL)
+        })
+        
+        # 如果下载或读取失败，中止后续流程
+        req(annotation_data)
+        # ---------------------------------------------------------------------
 
         anno_eset_probe <- if (annotation_file %in% c("anno_illumina", "anno_hug133plus2")) {
           "probe_id"
@@ -166,6 +184,7 @@ anno_esetServer <- function(id, external_eset = NULL) {
 
         req(!is.null(anno_eset_data))
         req(anno_eset_data)
+        
         if (input$log2 == "T") {
            setProgress(0.8, message = "Performing Log2 transformation...")
            anno_eset_data <- log2eset(anno_eset_data) 
@@ -189,4 +208,3 @@ anno_esetServer <- function(id, external_eset = NULL) {
     return(anno_eset_result)
   })
 }
-

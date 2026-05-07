@@ -183,10 +183,10 @@ get_cor_matrixBodyUI <- function(id, include_upload = TRUE) {
           tabPanel(
             "Plot", 
             plotDownloadUI(ns("plot_download")),
-            tags$p(
-            style = "color: #666; font-size: 90%;",
-            "Tip: Minimum width is set to 500 px for better visualization of the correlation matrix."
-            ),
+            # tags$p(
+            # style = "color: #555; font-style: italic; font-size: 90%; margin-top: -10px;",
+            # "Tip: Minimum width is set to 500 px for better visualization of the correlation matrix."
+            # ),
             uiOutput(ns("get_cor_matrix_plot_container"))
           )
         )
@@ -410,7 +410,7 @@ get_cor_matrixServer <- function(id, external_eset = NULL, target_cols = NULL) {
     output$get_cor_matrix_plot_container <- renderUI({
       req(get_cor_matrix_result())
       
-      plot_width  <- max(500, dims$width())
+      plot_width  <- dims$width()
       plot_height <- dims$height()
 
       div(style = "overflow: auto;",

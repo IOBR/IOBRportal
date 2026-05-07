@@ -2,9 +2,6 @@ library(shiny)
 library(DT)
 library(bs4Dash)
 library(shinyWidgets)
-#library(colourpicker)
-#library(ggsci)
-#library(ggplot2)
 library(zip)
 library(shinyhelper)
 library(duckdb)
@@ -13,23 +10,21 @@ library(dbplyr)
 library(pool)
 library(DBI)
 library(echarts4r)
-# library(shinycssloaders)
 library(waiter)
 library(readxl)
 library(writexl)
 library(IOBR)
-#devtools::load_all("C:/Users/qingcongl/Desktop/IOBRshiny_local/IOBR")
 
+options(shiny.maxRequestSize = 1024 * 1024^2)
+options(shiny.autoreload = TRUE)
 
-options(shiny.maxRequestSize = 1024 * 1024^2)  # 设置最大上传文件大小为 1024MB
-
+options(bitmapType = "cairo")
+pdf(NULL) 
 
 # ------------------------------
 # 1. Database mode
 # ------------------------------
 # 自动判断是否启用数据库模块：
-# 1) 如果 4 个真实 duckdb 文件都存在，则启用 TCGA / MOLC / IMMC / CLIC 数据库模块；
-# 2) 如果缺少任意一个 duckdb 文件，则进入 local mode，只保留用户上传数据相关功能。
 
 db_files <- c(
   tcga          = "data/tcga_signatures.duckdb",
@@ -703,17 +698,14 @@ ui <- shinyUI(
     body = bs4DashBody(
       tags$head(
         tags$style(HTML("
-          /* 一劳永逸压缩所有 fileInput 的下边距 */
           .shiny-input-container input[type='file'] {
             margin-bottom: 0px !important;
           }
       
-          /* 压缩其外层容器（默认会有 mb-3） */
           .shiny-input-container {
             margin-bottom: 4px !important;
           }
       
-          /* 同时也让所有按钮更紧贴上一行（Run 按钮等） */
           .shiny-input-container + div > .btn {
             margin-top: 0px !important;
           }
@@ -731,6 +723,7 @@ ui <- shinyUI(
 # ------------------------------
 
 server <- function(input, output, session) {
+  session$allowReconnect("force") # 允许网络波动时自动重连，保留之前的计算状态
   
   shinyhelper::observe_helpers(withMathJax = TRUE)
   
@@ -776,10 +769,7 @@ server <- function(input, output, session) {
   workflow_mutationServer("mod_workflow_mutation")
   workflow_iobrServer("mod_workflow_iobr")
   workflow_siggenesServer("mod_workflow_siggenes")
-  
-  
   # database workflow
-  # 只有 4 个 duckdb 文件都存在时，才运行数据库相关 server。
   if (database_available) {
     datasets_overviewServer("mod_datasets_overview", parent_session = session)
     
@@ -793,7 +783,12 @@ server <- function(input, output, session) {
     workflow_immunotherapyServer("mod_workflow_immunotherapy", pool = immunotherapy_pool)
     workflow_cancercohortServer("mod_workflow_cancercohort", pool = cancercohort_pool)
   }
+  
+  # 当用户关闭网页或断开连接时触发
+  session$onSessionEnded(function() {
+    message(paste("User session ended. Running garbage collection..."))
+    gc() # 强制释放不再使用的内存
+  })
 }
-
 
 shinyApp(ui, server)
