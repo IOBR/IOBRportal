@@ -134,6 +134,10 @@ combine_pd_esetServer <- function(id, external_eset = NULL) {
 
         req(combined_data)
 
+        clinical_cols <- setdiff(intersect(colnames(pdata), colnames(combined_data)), "ID")
+        feature_cols <- setdiff(colnames(combined_data), c("ID", clinical_cols))
+        combined_data <- combined_data[, c("ID", feature_cols, clinical_cols), drop = FALSE]
+
         colnames(combined_data) <- gsub("\\.", "-", colnames(combined_data))
         combine_pd_eset_result(combined_data)
 

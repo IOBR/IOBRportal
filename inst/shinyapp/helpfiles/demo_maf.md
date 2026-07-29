@@ -1,10 +1,9 @@
-**Data Preview (MAF File)**
+**Data Preview (Mutation Annotation File)**
 
-**Description:**
-This dataset is a **MAF file** used for somatic mutation analysis.  
-Please upload a valid **MAF (Mutation Annotation Format)** file as input.
+**Description:**  
+Upload a somatic mutation annotation table for MAF-based analysis. The file may use a **CSV, TXT, TSV** extension, provided that it contains the required MAF columns.
 
 *Notes:*  
-* *Supported formats: TXT, TSV, or MAF (tab-delimited text)*  
-* *Please upload a standard MAF file directly*  
-* *MAF files have predefined column requirements; no manual formatting is needed here*  
+* *Supported formats: CSV, TXT, TSV*  
+* *Both comma-delimited and tab-delimited mutation tables are supported*  
+* *The uploaded file must retain the standard MAF column names required for analysis*

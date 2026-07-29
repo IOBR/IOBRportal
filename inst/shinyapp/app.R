@@ -2,7 +2,6 @@ library(shiny)
 library(DT)
 library(bs4Dash)
 library(shinyWidgets)
-library(zip)
 library(shinyhelper)
 library(duckdb)
 library(dplyr)
@@ -15,19 +14,20 @@ library(readxl)
 library(writexl)
 library(IOBR)
 
-options(shiny.maxRequestSize = 1024 * 1024^2)
-options(shiny.autoreload = TRUE)
-
-options(bitmapType = "cairo")
-pdf(NULL) 
+options(shiny.maxRequestSize = 1024 * 1024^2)  # 设置最大上传文件大小为 1024MB
+# options(shiny.autoreload = TRUE) # 有改动即自动更新,不是更新选项的,是更新js啥的
+options(bitmapType = "cairo") # Linux 服务器用 Cairo 引擎来画图
+pdf(NULL) # 把找不到屏幕、偷偷摸摸生成的图扔进黑洞
 
 # ------------------------------
 # 1. Database mode
 # ------------------------------
 # 自动判断是否启用数据库模块：
+# 1) 如果 4 个真实 duckdb 文件都存在，则启用 TCGA / MOLC / IMMC / CLIC 数据库模块；
+# 2) 如果缺少任意一个 duckdb 文件，则进入 local mode，只保留用户上传数据相关功能。
 
 db_files <- c(
-  tcga          = "data/tcga_signatures.duckdb",
+  tcga = "data/tcga.duckdb",
   othercohort   = "data/othercohort.duckdb",
   immunotherapy = "data/immunotherapy.duckdb",
   cancercohort  = "data/cancercohort.duckdb"
@@ -42,20 +42,22 @@ if (database_available) {
   message("Missing database files: ", paste(names(db_files)[!file.exists(db_files)], collapse = ", "))
 }
 
-
 # ------------------------------
 # 2. Create database pools safely
 # ------------------------------
-
+# 延迟连接，不会打开所有连接
 make_duckdb_pool <- function(db_path) {
   if (!database_available) {
     return(NULL)
   }
   
-  dbPool(
-    duckdb(),
+  pool::dbPool(
+    drv = duckdb::duckdb(),
     dbdir = db_path,
-    read_only = TRUE
+    read_only = TRUE,
+    minSize = 0,
+    maxSize = 2,
+    idleTimeout = 300
   )
 }
 
@@ -88,11 +90,11 @@ onStop(function() {
 # ------------------------------
 # Helper functions
 source("modules/load_iobr_signature_names.R")
-
 source("modules/upload_module.R")
 source("modules/data_download_module.R")
 source("modules/dataTable_module.R")
 source("modules/plot_download_module.R")
+source("modules/privacy_cleanup_module.R")
 
 # functions
 source("modules/home_intro_module.R")
@@ -131,17 +133,20 @@ source("modules/find_markers_in_bulk_module.R")
 
 source("modules/make_mut_matrix_module.R")
 source("modules/find_mutations_module.R")
+source("modules/upload_clinical_data.R")
 source("modules/workflow_mutation_module.R")
 
 source("modules/workflow_iobr_module.R")
 source("modules/workflow_siggenes_module.R")
-
 
 # 只有数据库可用时，才 source 数据库相关模块。
 if (database_available) {
   source("modules/datasets_overview_module.R")
   source("modules/workflow_tcga_module.R")
   source("modules/prepare_tcga_data_module.R")
+  
+  source("modules/prepare_mutation_data_module.R")
+  source("modules/workflow_tcga_mut_module.R")
   
   source("modules/workflow_othercohort_module.R")
   source("modules/prepare_othercohort_data_module.R")
@@ -177,10 +182,17 @@ if (database_available) {
       ),
       
       bs4SidebarMenuSubItem(
-        text = "TCGA",
+        text = "TCGA · Signature and TME",
         tabName = "workflow_tcga",
-        icon = icon("align-left") 
+        icon = icon("chart-line")
       ),
+      
+      bs4SidebarMenuSubItem(
+        text = "TCGA · Mutation",
+        tabName = "workflow_tcga_mut",
+        icon = icon("dna")
+      ),
+
       
       bs4SidebarMenuSubItem(
         text = "MOLC",
@@ -204,12 +216,8 @@ if (database_available) {
   
   database_tab_items <- list(
     datasets_overviewUI("mod_datasets_overview"),
-    prepare_tcga_dataUI("mod_prepare_tcga_data"),
-    prepare_othercohort_dataUI("mod_prepare_othercohort_data"),
-    prepare_immunotherapy_dataUI("mod_prepare_immunotherapy_data"),
-    prepare_cancercohort_dataUI("mod_prepare_cancercohort_data"),
-    
     workflow_tcgaUI("mod_workflow_tcga"),
+    workflow_tcga_mutUI("mod_workflow_tcga_mut"),
     workflow_othercohortUI("mod_workflow_othercohort"),
     workflow_immunotherapyUI("mod_workflow_immunotherapy"),
     workflow_cancercohortUI("mod_workflow_cancercohort")
@@ -328,15 +336,89 @@ ui <- shinyUI(
     help = NULL,
     dark = FALSE,
     scrollToTop = TRUE,
-    
+
     preloader = list(
       html = tagList(
-        h4("Loading IOBRportal...", style = "color: #003388; font-weight: bold;"),
+        h4(
+          id = "preloader-title",
+          "Loading IOBRportal...",
+          style = "
+        color: #003388;
+        font-family: Arial, sans-serif;
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+        margin-bottom: 22px;
+      "
+        ),
+        
+        div(
+          id = "preloader-message",
+          style = "
+        margin-top: 22px;
+        text-align: center;
+        font-family: Arial, sans-serif;
+      ",
+          
+          p(
+            "Large datasets may take a few seconds. Thank you for your patience.",
+            style = "
+          color: #003388;
+          font-size: 18px;
+          font-weight: 600;
+          margin: 0;
+        "
+          )
+        ),
+        
         br(),
-        waiter::spin_3()
+        
+        div(
+          id = "preloader-spinner",
+          waiter::spin_3()
+        ),
+        
+        # 只有超过30秒仍未连接成功时才显示
+        div(
+          id = "preloader-timeout",
+          style = "
+        display: none;
+        margin-top: 20px;
+        text-align: center;
+        font-family: Arial, sans-serif;
+      ",
+          
+          p(
+            "The server may be busy or the network connection may be unstable.",
+            style = "
+          color: #003388;
+          font-size: 18px;
+          font-weight: 600;
+          margin: 0;
+        "
+          ),
+          
+          tags$button(
+            type = "button",
+            onclick = "window.location.reload();",
+            "Retry",
+            style = "
+          color: #ffffff;
+          background-color: #003388;
+          border: none;
+          border-radius: 5px;
+          padding: 8px 22px;
+          font-size: 15px;
+          font-weight: 600;
+          cursor: pointer;
+        "
+          )
+        )
       ),
+      
       color = "#ffffff"
     ),
+    
     
     header = bs4DashNavbar(
       brand = span(
@@ -698,18 +780,55 @@ ui <- shinyUI(
     body = bs4DashBody(
       tags$head(
         tags$style(HTML("
+          /* 一劳永逸压缩所有 fileInput 的下边距 */
           .shiny-input-container input[type='file'] {
             margin-bottom: 0px !important;
           }
       
+          /* 压缩其外层容器（默认会有 mb-3） */
           .shiny-input-container {
             margin-bottom: 4px !important;
           }
       
+          /* 同时也让所有按钮更紧贴上一行（Run 按钮等） */
           .shiny-input-container + div > .btn {
             margin-top: 0px !important;
           }
-        "))
+        ")),
+        
+        # 不再等所有初始计算全部结束
+        # 只要 Shiny session 建立完成
+        tags$script(
+          HTML("
+            window.iobrSessionInitialized = false;
+
+            $(document).one('shiny:sessioninitialized', function() {
+              window.iobrSessionInitialized = true;
+
+              if (window.iobrStartupTimer) {
+                window.clearTimeout(window.iobrStartupTimer);
+              }
+
+              $('.waiter-overlay')
+                .stop(true, true)
+                .fadeOut(200, function() {
+                  $(this).remove();
+                });
+            });
+
+            $(function() {
+              window.iobrStartupTimer = window.setTimeout(function() {
+                if (window.iobrSessionInitialized) return;
+
+                $('#preloader-title').text('Connection timeout');
+                $('#preloader-message').hide();
+                $('#preloader-spinner').hide();
+                $('#preloader-timeout').fadeIn(200);
+              }, 30000);
+            });
+          ")
+        )
+        
       ),
       
       app_tab_items
@@ -724,8 +843,9 @@ ui <- shinyUI(
 
 server <- function(input, output, session) {
   session$allowReconnect("force") # 允许网络波动时自动重连，保留之前的计算状态
+  shinyhelper::observe_helpers(withMathJax = FALSE) # 不需要LaTeX
   
-  shinyhelper::observe_helpers(withMathJax = TRUE)
+  iobr_register_privacy_cleanup(session) #清理脚本
   
   # function
   home_introServer("home_intro", parent_session = session)
@@ -770,25 +890,16 @@ server <- function(input, output, session) {
   workflow_iobrServer("mod_workflow_iobr")
   workflow_siggenesServer("mod_workflow_siggenes")
   # database workflow
+  # 只有 4 个 duckdb 文件都存在时，才运行数据库相关 server
   if (database_available) {
     datasets_overviewServer("mod_datasets_overview", parent_session = session)
-    
-    prepare_tcga_dataServer("mod_prepare_tcga_data", pool = tcga_pool)
-    prepare_othercohort_dataServer("mod_prepare_othercohort_data", pool = othercohort_pool)
-    prepare_immunotherapy_dataServer("mod_prepare_immunotherapy_data", pool = immunotherapy_pool)
-    prepare_cancercohort_dataServer("mod_prepare_cancercohort_data", pool = cancercohort_pool)
-    
     workflow_tcgaServer("mod_workflow_tcga", pool = tcga_pool)
+    workflow_tcga_mutServer("mod_workflow_tcga_mut", pool = tcga_pool)
     workflow_othercohortServer("mod_workflow_othercohort", pool = othercohort_pool)
     workflow_immunotherapyServer("mod_workflow_immunotherapy", pool = immunotherapy_pool)
     workflow_cancercohortServer("mod_workflow_cancercohort", pool = cancercohort_pool)
   }
-  
-  # 当用户关闭网页或断开连接时触发
-  session$onSessionEnded(function() {
-    message(paste("User session ended. Running garbage collection..."))
-    gc() # 强制释放不再使用的内存
-  })
 }
 
 shinyApp(ui, server)
+

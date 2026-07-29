@@ -115,6 +115,11 @@ deconvo_tmeBodyUI <- function(id, include_upload = TRUE) {
             "Parallel",
             choices = c("True" = "T", "False" = "F"),
             selected = "F"
+          ),
+          br(),
+          tags$p(
+          style = "color: #555; font-style: italic; font-size: 90%; margin-top: -10px;",
+          "Note: Parallel can accelerate the calculation."
           )
         ),
 

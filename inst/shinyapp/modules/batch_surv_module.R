@@ -102,7 +102,7 @@ batch_survBodyUI <- function(id, include_upload = TRUE) {
 
         selectInput(
           inputId = ns("batch_surv_best_cutoff"),
-          label = "best_cutoff",
+          label = "Best Cutoff",
           choices = c("True" = "T", "False" = "F"),
           selected = "F"
         )
@@ -161,7 +161,7 @@ batch_survServer <- function(id, external_eset = NULL) {
         session = session,
         inputId = "batch_surv_variable",
         choices = numeric_cols,
-        selected = numeric_cols
+        selected = character(0)
       )
       
       updatePickerInput(

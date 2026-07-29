@@ -17,7 +17,7 @@ find_mutationsUI <- function(id) {
 }
 
 # ---- BodyUI ----
-find_mutationsBodyUI <- function(id, include_upload = TRUE) {
+find_mutationsBodyUI <- function(id, include_upload = TRUE, include_signature_upload = TRUE) {
   ns <- NS(id)
   
   fluidRow(
@@ -47,15 +47,18 @@ find_mutationsBodyUI <- function(id, include_upload = TRUE) {
           )
         },
 
-        fileInput(
-          inputId   = ns("find_mutations_input2"),
-          label     = "Signature Matrix",
-          multiple  = FALSE,
-          accept    = NULL,
-          width     = NULL,
-          buttonLabel = "Browse",
-          placeholder = "Choose a file"
-        )%>%
+        # fileInput(
+        #   inputId   = ns("find_mutations_input2"),
+        #   label     = "Signature Matrix",
+        #   multiple  = FALSE,
+        #   accept    = NULL,
+        #   width     = NULL,
+        #   buttonLabel = "Browse",
+        #   placeholder = "Choose a file"
+        # )
+        if (isTRUE(include_signature_upload)) {
+        tagList(
+          uploadUI(ns("signature_upload"), label = "Signature Matrix")%>%
           helper(
             type    = "markdown",
             icon    = "question-circle",
@@ -63,6 +66,12 @@ find_mutationsBodyUI <- function(id, include_upload = TRUE) {
             colour  = "#007bff",
             content = "demo_stad_sig"
           ),
+          tags$p(
+          style = "color: #555; font-style: italic; font-size: 90%; margin-top: -10px;",
+          "Note: Signature scores can be calculated using the IOBR Workflow then uploaded here."
+          )
+        )
+        },
        
         div(
           style = "text-align: center; margin-top: 10px;",
@@ -125,12 +134,16 @@ find_mutationsBodyUI <- function(id, include_upload = TRUE) {
           selected = "mean"
         ),
 
-        # textInput(
-        #   inputId = ns("oncoprint_cols"),
-        #   label   = "Colors",
-        #   value   = "#224444",
-        #   placeholder = "e.g., #224444"
-        # ),
+        textInput(
+          inputId     = ns("oncoprint_col"),
+          label       = "Mutation Color",
+          value       = "#224444",
+          placeholder = "e.g., #224444"
+        ),
+        tags$p(
+          style = "color: #555; font-style: italic; font-size: 90%; margin-top: -10px;",
+          "Input a hex code or color name for mutation events."
+        ),
         
         sliderInput(
           inputId = ns("gene_counts"),
@@ -171,18 +184,32 @@ find_mutationsBodyUI <- function(id, include_upload = TRUE) {
           step    = 0.1
         ),
 
-        # selectInput(
-        #   inputId = ns("palette"),
-        #   label   = "Palette",
-        #   choices = c("nrc","jama","aaas","jco","paired1","paired2","paired3","paired4","accent","set2"),
-        #   selected = "jama"
-        # ),
+        selectInput(
+          inputId = ns("palette"),
+          label   = "Palette",
+          choices = c("nrc","jama","aaas","jco","paired1","paired2","paired3","paired4","accent","set2"),
+          selected = "jama"
+        ),
+
+        textAreaInput(
+          inputId = ns("custom_cols"),
+          label = "Colors",
+          value = "",
+          placeholder = "e.g., #E64B35, #4DBBD5, #00A087\nSeparate by comma",
+          rows = 3,
+          resize = "vertical"
+        ),
+        br(),
+        tags$p(
+          style = "color: #555; font-style: italic; font-size: 90%; margin-top: -10px;",
+          "Input hex codes or color names separated by comma. If filled, 'Palette' will be ignored."
+        ),
 
         selectInput(
           inputId = ns("jitter"),
           label   = "Show Jitter",
           choices = c("True" = "T", "False" = "F"),
-          selected = "F"
+          selected = "T"
         )
       ),
 
@@ -252,14 +279,14 @@ find_mutationsBodyUI <- function(id, include_upload = TRUE) {
 }
 
 
-find_mutationsServer <- function(id, external_mut_matrix = NULL) {
+find_mutationsServer <- function(id, external_mut_matrix = NULL, external_sig_matrix = NULL) {
   moduleServer(id, function(input, output, session) {
 
     # 1. 突变矩阵输入逻辑
     mut_data <- if (!is.null(external_mut_matrix)) {
       external_mut_matrix
     } else {
-      uploadServer("upload")
+      uploadServer("upload", mode = "eset")
     }
 
     # 2. 定义响应式变量
@@ -267,27 +294,36 @@ find_mutationsServer <- function(id, external_mut_matrix = NULL) {
     res_box_plot  <- reactiveVal(NULL) 
     res_folder    <- reactiveVal(NULL)
 
-    sig_mat_data <- reactive({
-      req(input$find_mutations_input2)
+    # sig_mat_data <- reactive({
+    #   req(input$find_mutations_input2)
       
-      sig_file <- input$find_mutations_input2
-      ext      <- tools::file_ext(sig_file$name)
+    #   sig_file <- input$find_mutations_input2
+    #   ext      <- tools::file_ext(sig_file$name)
       
-      data <- tryCatch({
-        if (ext == "csv") {
-          read.csv(sig_file$datapath, header = TRUE, stringsAsFactors = FALSE, check.names = FALSE)
-        } else if (ext == "tsv") {
-          read.delim(sig_file$datapath, header = TRUE, stringsAsFactors = FALSE, check.names = FALSE)
-        } else {
-          read.table(sig_file$datapath, header = TRUE, sep = "\t", stringsAsFactors = FALSE, check.names = FALSE)
-        }
-      }, error = function(e) {
-        showNotification(paste("Error reading file:", e$message), type = "error")
-        return(NULL)
-      })
+    #   data <- tryCatch({
+    #     if (ext == "csv") {
+    #       read.csv(sig_file$datapath, header = TRUE, stringsAsFactors = FALSE, check.names = FALSE)
+    #     } else if (ext == "tsv") {
+    #       read.delim(sig_file$datapath, header = TRUE, stringsAsFactors = FALSE, check.names = FALSE)
+    #     } else {
+    #       read.table(sig_file$datapath, header = TRUE, sep = "\t", stringsAsFactors = FALSE, check.names = FALSE)
+    #     }
+    #   }, error = function(e) {
+    #     showNotification(paste("Error reading file:", e$message), type = "error")
+    #     return(NULL)
+    #   })
       
-      return(data)
-    })
+    #   return(data)
+    # })
+    
+    sig_mat_data <- if (!is.null(external_sig_matrix)) {
+      external_sig_matrix
+    } else {
+      uploadServer(
+        "signature_upload",
+        mode = "pdata"
+      )
+    }
 
     # 4. [逻辑优化] 监听读取好的数据，动态更新 Signature 选项
     observeEvent(sig_mat_data(), {
@@ -347,6 +383,21 @@ find_mutationsServer <- function(id, external_mut_matrix = NULL) {
         # --- 运行分析 ---
         setProgress(0.5, message = "Running analysis...")
         
+
+        cols_vec <- NULL
+        raw_cols_text <- input$custom_cols
+        
+        if (!is.null(raw_cols_text) && trimws(raw_cols_text) != "") {
+          # 1. 按逗号、分号或换行符分割
+          split_cols <- unlist(strsplit(raw_cols_text, "[,;\n]"))
+          # 2. 去除首尾空格
+          split_cols <- trimws(split_cols)
+          # 3. 去除空字符串
+          cols_vec <- split_cols[split_cols != ""]
+          
+          if(length(cols_vec) == 0) cols_vec <- NULL
+        }
+
         res <- tryCatch({
 
           old_wd <- getwd()
@@ -363,10 +414,11 @@ find_mutationsServer <- function(id, external_mut_matrix = NULL) {
             save_path            = folder_name,
             plot                 = TRUE,
             show_plot            = FALSE, 
-            palette              = "jama",
+            palette              = input$palette,
+            cols                 = cols_vec,
             show_col             = FALSE,           
             oncoprint_group_by   = input$oncoprint_group_by,
-            oncoprint_col        = "#224444",
+            oncoprint_col        = input$oncoprint_col,
             gene_counts          = input$gene_counts,
             jitter               = input$jitter == "T",
             point_size           = input$point_size,

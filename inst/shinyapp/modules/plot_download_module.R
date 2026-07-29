@@ -91,11 +91,11 @@ plotDownloadServer <- function(id, plot_reactive, filename_prefix = "plot", plot
         "percent_bar"    = c(w = 500,  h = 400),
         "sig_forrest"    = c(w = 550,  h = 300),
         "surv"           = c(w = 1000, h = 500),
-        "time_roc"       = c(w = 550,  h = 400),
+        "time_roc"       = c(w = 500,  h = 450),
         "surv_group"     = c(w = 500,  h = 450),
-        "get_cor"        = c(w = 500,  h = 400),
+        "get_cor"        = c(w = 500,  h = 500),
         "sig_roc"        = c(w = 500,  h = 500),
-        "default"        = c(w = 600,  h = 450)
+        "default"        = c(w = 600,  h = 500)
       )
       
       if (type %in% names(fixed_sizes)) return(as.list(fixed_sizes[[type]]))
@@ -166,43 +166,40 @@ plotDownloadServer <- function(id, plot_reactive, filename_prefix = "plot", plot
           
           if (type == "get_cor_matrix") {
 
-  row_px <- 35
-  col_px <- 45
+              row_px <- 35
+              col_px <- 45
 
-  x_labs <- character(0)
-  y_labs <- character(0)
+              x_labs <- character(0)
+              y_labs <- character(0)
 
-  if (inherits(p, "ggplot") && !is.null(p$data)) {
-    x_labs <- as.character(unique(p$data[[1]]))
-    y_labs <- as.character(unique(p$data[[2]]))
-  }
+              if (inherits(p, "ggplot") && !is.null(p$data)) {
+                x_labs <- as.character(unique(p$data[[1]]))
+                y_labs <- as.character(unique(p$data[[2]]))
+              }
 
-  max_x_lab <- if (length(x_labs) > 0) max(nchar(x_labs), na.rm = TRUE) else 20
-  max_y_lab <- if (length(y_labs) > 0) max(nchar(y_labs), na.rm = TRUE) else 20
+              max_x_lab <- if (length(x_labs) > 0) max(nchar(x_labs), na.rm = TRUE) else 20
+              max_y_lab <- if (length(y_labs) > 0) max(nchar(y_labs), na.rm = TRUE) else 20
 
-  bottom_margin_px <- max(220, max_x_lab * 9)
-  left_margin_px   <- max(220, max_y_lab * 9)
+              bottom_margin_px <- max(220, max_x_lab * 9)
+              left_margin_px   <- max(220, max_y_lab * 9)
 
-  h <- bottom_margin_px + 120 + (n_rows * row_px)
-  w <- left_margin_px + 180 + (n_cols * col_px)
+              h <- bottom_margin_px + 120 + (n_rows * row_px)
+              w <- left_margin_px + 180 + (n_cols * col_px)
 
-  h <- max(400, min(h, 3000))
-  w <- max(600, min(w, 4000))
+              h <- max(400, min(h, 3000))
+              w <- max(600, min(w, 4000))
 
-} else {
+            } else {
 
-  row_px <- 10 
-  col_px <- 15 
+              row_px <- 10 
+              col_px <- 15 
 
-  h <- 200 + (n_rows * row_px) 
-  w <- 200 + (n_cols * col_px)
+              h <- 200 + (n_rows * row_px) 
+              w <- 200 + (n_cols * col_px)
 
-  h <- max(400, min(h, 2000)) 
-  w <- max(300, min(w, 2000))
-}
-
-          
-          
+              h <- max(400, min(h, 2000)) 
+              w <- max(300, min(w, 2000))
+            }
         }, silent = TRUE)
         
       # === B. Cell Bar Plot ===

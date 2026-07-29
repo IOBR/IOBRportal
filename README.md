@@ -49,7 +49,7 @@ This workflow supports:
 
 ## 🗂️ Cohort resources
 
-### 1. TCGA Cohort
+### 1. TCGA Cohorts
 
 This workflow is designed for TCGA cohort analysis and supports:
 
@@ -61,7 +61,7 @@ This workflow is designed for TCGA cohort analysis and supports:
 - correlation analysis
 - group comparison
 
-### 2. MOLC (Molecular Cohort)
+### 2. Cancer Cohorts
 
 This workflow is designed for curated cancer cohort datasets and supports:
 
@@ -72,7 +72,7 @@ This workflow is designed for curated cancer cohort datasets and supports:
 - correlation analysis
 - group comparison
 
-### 3. IMMC (Immunotherapy Cohort)
+### 3. Immunotherapy Cohorts
 
 This workflow is designed for immunotherapy-focused datasets and supports:
 
@@ -83,7 +83,7 @@ This workflow is designed for immunotherapy-focused datasets and supports:
 - correlation analysis
 - group comparison
 
-### 4. CLIC (Clinical Cohort)
+### 4. Other Cohorts
 
 This workflow is designed for CPTAC/TARGET-style datasets and supports:
 

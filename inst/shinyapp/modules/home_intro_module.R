@@ -198,7 +198,7 @@ home_introUI <- function(id) {
         tags$span(class = "iobr-figure-badge", "Workflow Summary")
       ),
       tags$img(
-        src = "IOBRportal overview.png",
+        src = "IOBRportal_overview.png",
         style = "width: 100%; height: auto; display: block; margin: 0 auto; border-radius: 6px;"
       ),
       tags$div(

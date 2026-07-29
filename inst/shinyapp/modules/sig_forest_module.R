@@ -60,9 +60,35 @@ sig_forestBodyUI <- function(id, include_upload = TRUE) {
 
         textInput(
           inputId = ns("sig_forest_signature"),
-          label = "Signature",
+          label = "Signature Column",
           value = "ID",
-          placeholder = "Column name (e.g., TMEscore_plus)"
+          placeholder = "Column name"
+        ),
+
+        pickerInput(
+          inputId = ns("sig_forest_variables"),
+          label = "Signatures",
+          choices = NULL,
+          multiple = TRUE,
+          options = pickerOptions(
+            actionsBox = TRUE,
+            liveSearch = TRUE,
+            size = 10,
+            selectedTextFormat = "count > 3",
+            style = "btn-outline-secondary",
+            dropupAuto = FALSE,
+            container = "body",
+            title = "Please select signatures..."
+          )
+        ),
+
+        numericInput(
+          inputId = ns("sig_forest_n"),
+          label = "Signature Number",
+          value = 10,
+          min = 1,
+          max = 50,
+          step = 1
         ),
 
         textInput(
@@ -91,15 +117,6 @@ sig_forestBodyUI <- function(id, include_upload = TRUE) {
           label = "Upper CI (95%)",
           value = "CI_up_0.95",
           placeholder = "Column name (e.g., CI_up_0.95)"
-        ),
-
-        numericInput(
-          inputId = ns("sig_forest_n"),
-          label = "Signature Number",
-          value = 10,
-          min = 1,
-          max = 50,
-          step = 1
         ),
 
         sliderInput(
@@ -173,6 +190,56 @@ sig_forestServer <- function(id, external_eset = NULL) {
 
     sig_forest_result <- reactiveVal(NULL)
 
+    # 根据Signature Number自动选择signature
+    observeEvent(
+      list(input_data(), input$sig_forest_signature, input$sig_forest_pvalue, input$sig_forest_hr, input$sig_forest_n),
+      {
+        req(input_data(), input$sig_forest_n)
+
+        data <- as.data.frame(input_data())
+        signature_col <- input$sig_forest_signature
+        pvalue_col <- input$sig_forest_pvalue
+        hr_col <- input$sig_forest_hr
+
+        if (!is.null(signature_col) &&
+            nzchar(signature_col) &&
+            signature_col %in% colnames(data) &&
+            pvalue_col %in% colnames(data) &&
+            hr_col %in% colnames(data)) {
+
+          signature_choices <- unique(as.character(data[[signature_col]]))
+          signature_choices <- signature_choices[!is.na(signature_choices) & signature_choices != ""]
+
+          auto_n <- min(as.integer(input$sig_forest_n), length(signature_choices))
+          selected_signatures <- signature_choices
+
+          if (length(signature_choices) > auto_n) {
+            data$HR_statistic <- as.numeric(data[[hr_col]]) - 1
+
+            selected_signatures <- high_var_fea(
+              result = data,
+              target = signature_col,
+              name_padj = pvalue_col,
+              padj_cutoff = 1,
+              name_logfc = "HR_statistic",
+              logfc_cutoff = 0,
+              n = auto_n / 2
+            )
+
+            selected_signatures <- as.character(selected_signatures)
+          }
+
+          updatePickerInput(
+            session = session,
+            inputId = "sig_forest_variables",
+            choices = signature_choices,
+            selected = selected_signatures
+          )
+        }
+      },
+      ignoreInit = FALSE
+    )
+
     observeEvent(input$run_sig_forest, {
       req(input_data())
 
@@ -221,6 +288,14 @@ sig_forestServer <- function(id, external_eset = NULL) {
           return(NULL)
         }
 
+        if (is.null(input$sig_forest_variables) || length(input$sig_forest_variables) == 0) {
+          showNotification("Please select at least one Signature.", type = "error")
+          return(NULL)
+        }
+
+        data <- data[as.character(data[[input$sig_forest_signature]]) %in% input$sig_forest_variables, ]
+        data <- data[order(as.numeric(data[[input$sig_forest_hr]]), decreasing = FALSE), ]
+
         setProgress(0.5, message = "Plotting...")
 
         pp <- tryCatch({
@@ -231,7 +306,7 @@ sig_forestServer <- function(id, external_eset = NULL) {
             HR             = input$sig_forest_hr,
             CI_low_0.95    = input$sig_forest_CI_low_0.95,
             CI_up_0.95     = input$sig_forest_CI_up_0.95,
-            n              = input$sig_forest_n,
+            n              = nrow(data),
             max_character  = 25,
             discrete_width = 35,
             # color_option   = input$color_option,
@@ -282,4 +357,3 @@ sig_forestServer <- function(id, external_eset = NULL) {
     return(sig_forest_result)
   })
 }
-

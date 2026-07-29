@@ -64,7 +64,7 @@ calculate_sig_scoreBodyUI <- function(id, include_upload = TRUE) {
             "Z-score" = "zscore",
             "Integration" = "integration"
           ),
-          selected = "ssgsea"
+          selected = "pca"
         ),
 
         selectInput(

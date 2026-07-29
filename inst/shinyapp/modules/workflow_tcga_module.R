@@ -1,16 +1,15 @@
 # =========================================================
-# Module: workflow_othercohort
-# Description: CPTAC/TARGET 泛癌 Signature 分析工作流 (DuckDB版)
+# Module: workflow_tcga
+# Description: TCGA 泛癌 Signature 分析工作流 (DuckDB版)
 # =========================================================
-
-workflow_othercohortUI <- function(id) {
+workflow_tcgaUI <- function(id) {
   ns <- NS(id)
   
   bs4TabItem(
-    tabName = "workflow_othercohort", 
+    tabName = "workflow_tcga",
     
     h3(HTML(
-      "CLIC Workflow
+      "TCGA Cohorts Workflow
       <span style='font-size:80%; color:#333;'>:
        Database-driven Pipeline for Signature Scoring, TME Deconvolution, and Downstream Analysis.</span>"
     )) %>%
@@ -19,7 +18,7 @@ workflow_othercohortUI <- function(id) {
         icon = "question-circle",
         size = "m",
         colour = "#007bff",
-        content = "workflow_othercohort_help" 
+        content = "workflow_tcga_help"
       ),
     
     tabsetPanel(
@@ -36,8 +35,8 @@ workflow_othercohortUI <- function(id) {
         tabsetPanel(
           id = ns("tabs_part1"),
           type = "tabs",
-          
-          tabPanel("Data Selection", prepare_othercohort_dataBodyUI(ns("mod_prepare"))),
+
+          tabPanel("Data Selection", prepare_tcga_dataBodyUI(ns("mod_prepare"))),
           tabPanel("TME Cluster",    tme_clusterBodyUI(ns("mod_cluster"), include_upload = FALSE, only_table = TRUE))
         )
       ),
@@ -58,7 +57,7 @@ workflow_othercohortUI <- function(id) {
           tabPanel("Cell Bar Plot",    cell_bar_plotBodyUI(ns("mod_cellbar"), include_upload = FALSE))
         )
       ),
-   
+
       # =========================================================
       # Part: Group Comparison
       # =========================================================
@@ -116,90 +115,53 @@ workflow_othercohortUI <- function(id) {
   )
 }
 
-workflow_othercohortServer <- function(id, pool) {
+
+workflow_tcgaServer <- function(id, pool) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+
+    # =========================================================
+    # 1. Prepare Data (调用二合一模块)
+    # =========================================================
+    res_source <- prepare_tcga_dataServer("mod_prepare", pool = pool)
     
     # =========================================================
-    # 1. Prepare Data 
-    # --- 关键修改：调用 Other Cohort Server ---
-    # =========================================================
-    res_source <- prepare_othercohort_dataServer("mod_prepare", pool = pool)
-    
-    # =========================================================
-    # 2. Base Combine (合并 Pdata + Expr)
-    # =========================================================
-    res_base_combined <- reactive({
-      req(res_source()) 
-      
-      data_list <- res_source()
-      expr  <- data_list$expr
-      pdata <- data_list$pdata
-      
-      # ID 交集
-      common <- intersect(expr$ID, pdata$ID)
-      if(length(common) == 0) return(NULL)
-      
-      # 排序
-      expr  <- expr[match(common, expr$ID), , drop = FALSE]
-      pdata <- pdata[match(common, pdata$ID), , drop = FALSE]
-      
-      # 移除重复 ID 并合并
-      expr_clean <- dplyr::select(expr, -ID)
-      combined_df <- cbind(pdata, expr_clean)
-      
-      return(combined_df)
-    })
-    
-    # =========================================================
-    # 3. Run Cluster (运行聚类)
+    # 2. Run Cluster (运行聚类)
     # =========================================================
     res_expr_only <- reactive({
       req(res_source())
       res_source()$expr
     })
     
-    # 必须运行聚类
+    # 运行聚类
     res_cluster <- tme_clusterServer("mod_cluster", external_eset = res_expr_only, only_table = TRUE)
     
     # =========================================================
-    # 4. Final Combine (强制提取前两列 -> cluster -> 合并)
+    # 3. Final Combine
     # =========================================================
     res_final_combined <- reactive({
-      # 强制等待：必须有基础表，必须有聚类结果
-      req(res_base_combined())
-      req(res_cluster()) 
-      
-      df_final <- res_base_combined()
-      cluster_tab <- res_cluster()
-      
-      # --- 直接提取前两列，强制重命名 ---
-      # 1. 提取 (ID, cluster)
-      cluster_col <- cluster_tab[, c(1, 2)]
-      
-      # 2. 命名 (强制小写 "Cluster")
-      colnames(cluster_col) <- c("ID", "Cluster")
-      
-      # 3. 确保 ID 类型一致
-      cluster_col$ID <- as.character(cluster_col$ID)
-      df_final$ID    <- as.character(df_final$ID)
+      req(res_source(), res_cluster())
 
-      # 4. 防止原表重名 (删掉旧 cluster)
-      if ("cluster" %in% colnames(df_final)) {
-        df_final <- dplyr::select(df_final, -cluster)
+      pdata <- res_source()$pdata
+      expr <- res_cluster()
+
+      common <- intersect(expr$ID, pdata$ID)
+      if (length(common) == 0) return(NULL)
+
+      expr <- expr[match(common, expr$ID), , drop = FALSE]
+      pdata <- pdata[match(common, pdata$ID), , drop = FALSE]
+
+      df_final <- cbind(pdata, dplyr::select(expr, -ID))
+
+      if ("cluster" %in% colnames(df_final) && "Grade" %in% colnames(df_final)) {
+        df_final <- dplyr::relocate(df_final, cluster, .after = Grade)
       }
 
-      # 5. 合并
-      df_final <- df_final %>% dplyr::left_join(cluster_col, by = "ID")
-
-      if ("Grade" %in% colnames(df_final)) {
-        df_final <- df_final %>% dplyr::relocate(Cluster, .after = Grade)
-      }
-      return(df_final)
+      df_final
     })
     
     # =========================================================
-    # 5. Downstream Analysis (与 TCGA 流程完全一致)
+    # 4. Downstream Analysis
     # =========================================================
     
     # Visualization
@@ -225,11 +187,12 @@ workflow_othercohortServer <- function(id, pool) {
     })
     # 将过滤后的 reactive 传给模块
     cell_bar_plotServer("mod_cellbar", external_eset = res_for_cellbar)
-      
+
     # Comparison
     # batch_wilcoxonServer("mod_wilcoxon", external_eset = res_final_combined)
     # batch_kruskalServer("mod_kruskal", external_eset = res_final_combined)
     # sig_boxServer("mod_box_stat", external_eset = res_final_combined)
+
     res_wilcox <- batch_wilcoxonServer("mod_wilcoxon", external_eset = res_final_combined)
     res_kruskal <- batch_kruskalServer("mod_kruskal", external_eset = res_final_combined)
 
@@ -259,7 +222,6 @@ workflow_othercohortServer <- function(id, pool) {
     # Survival
     res_batch_surv <- batch_survServer("mod_batch_surv", external_eset = res_final_combined)
     sig_forestServer("mod_forest", external_eset = res_batch_surv)
-
     # 此处的sig_heatmap 依赖 Batch Survival 的结果
     surv_sorted_ids <- reactive({
       req(res_batch_surv())
@@ -275,8 +237,8 @@ workflow_othercohortServer <- function(id, pool) {
     sig_heatmapServer("mod_surv_heatmap", external_eset = res_final_combined, ordered_ids = surv_sorted_ids)
 
     sig_surv_plotServer("mod_surv_plot", external_eset = res_final_combined)
-    surv_groupServer("mod_surv_group", external_eset = res_final_combined)
     roc_timeServer("mod_roc", external_eset = res_final_combined)
+    surv_groupServer("mod_surv_group", external_eset = res_final_combined)
     sig_rocServer("mod_sig_roc", external_eset = res_final_combined)
     
     # Correlation
@@ -284,6 +246,6 @@ workflow_othercohortServer <- function(id, pool) {
     batch_pccServer("mod_pcc", external_eset = res_final_combined)
     get_corServer("mod_single_cor", external_eset = res_final_combined)
     get_cor_matrixServer("mod_cor_matrix", external_eset = res_final_combined)
-
+        
   })
 }

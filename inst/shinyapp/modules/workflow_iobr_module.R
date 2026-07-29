@@ -75,7 +75,7 @@ workflow_iobrUI <- function(id) {
                   anno_esetBodyUI(ns("mod_anno"), include_upload = TRUE)
                 )
           ),
-          tabPanel("Detect Outliers", find_outlier_samplesBodyUI(ns("mod_detcct_outlier"), include_upload = FALSE)),
+          tabPanel("Detect Outliers", find_outlier_samplesBodyUI(ns("mod_detcct_outlier"), include_upload = FALSE, optional = TRUE)),
           
           # Calculate Features (二合一切换)
           tabPanel("Calculate Features", 
@@ -245,19 +245,12 @@ workflow_iobrServer <- function(id) {
     })
 
     # 3. Detect outlier
-    res_outlier <- find_outlier_samplesServer(
-      "mod_detcct_outlier",
-      external_eset = res_preprocess
-    )
+    res_outlier <- find_outlier_samplesServer("mod_detcct_outlier", external_eset = res_preprocess, optional = TRUE)
 
     # 4. Clean eset
     clean_eset <- reactive({
-      if (!is.null(res_outlier())) {
-        return(res_outlier())
-      } else {
-        return(res_preprocess())
-      }
-    }) # 如果 outlier 模块没跑(NULL)，就回退用当前 preprocessing 结果
+      res_outlier()
+    })
 
     res_sig_calc <- calculate_sig_scoreServer("mod_score", external_eset = clean_eset)
     res_tme_calc <- deconvo_tmeServer("mod_tme", external_eset = clean_eset)

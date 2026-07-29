@@ -1,18 +1,21 @@
 # =========================================================
 # Module: tme_cluster
 # =========================================================
+
 tme_clusterUI <- function(id) {
   ns <- NS(id)
+
   bs4TabItem(
     tabName = "tme_cluster",
     h3(HTML(
       "Tme_cluster
       <span style='font-size:80%; color:#333;'>:
        Performs tumor microenvironment clustering analysis.</span>"
-      )),
+    )),
     tme_clusterBodyUI(id)
   )
 }
+
 
 # ---- Body UI ----
 tme_clusterBodyUI <- function(id, include_upload = TRUE, only_table = FALSE) {
@@ -22,6 +25,7 @@ tme_clusterBodyUI <- function(id, include_upload = TRUE, only_table = FALSE) {
     # Left Panel: Parameters / Upload / Download
     column(
       width = 3,
+
       bs4Card(
         title = "Parameter",
         status = "gray",
@@ -31,41 +35,42 @@ tme_clusterBodyUI <- function(id, include_upload = TRUE, only_table = FALSE) {
         width = 12,
         maximizable = TRUE,
 
-        # Upload (Conditional)
+        # Upload
         if (isTRUE(include_upload)) {
           tagList(
             uploadUI(ns("upload")) %>%
               helper(
-                type    = "markdown",
-                icon    = "question-circle",
-                size    = "m",
-                colour  = "#007bff",
+                type = "markdown",
+                icon = "question-circle",
+                size = "m",
+                colour = "#007bff",
                 content = "demo_stad_sig"
               )
           )
         },
 
+        tags$p(
+          "Optional: select interesting features for TME clustering; leave empty to skip this step.",
+          style = "color: #555; font-style: italic; font-size: 90%;"
+        ),
 
         div(
           style = "text-align: center; margin-top: 10px;",
-          actionButton(
-            inputId = ns("run_tme_cluster"),
-            label = "Run Analysis",
-            class = "btn-primary"
-          )
+          actionButton(ns("run_tme_cluster"), "Run Analysis", class = "btn-primary")
         ),
 
         # Feature Selection
         pickerInput(
           inputId = ns("tme_cluster_features"),
           label = "Features",
-          choices = NULL, # Initialized empty
+          choices = NULL,
           multiple = TRUE,
           options = pickerOptions(
-            actionsBox = TRUE, #
+            actionsBox = TRUE,
             liveSearch = TRUE,
             size = 10,
-            selectedTextFormat = NULL,
+            selectedTextFormat = "count > 3",
+            countSelectedText = "{0} features selected",
             style = "btn-outline-secondary",
             dropupAuto = FALSE,
             container = "body",
@@ -73,32 +78,17 @@ tme_clusterBodyUI <- function(id, include_upload = TRUE, only_table = FALSE) {
           )
         ),
 
-        numericInput(
-          inputId = ns("tme_cluster_min_nc"),
-          label = "Min Clusters",
-          value = 2,
-          min = 2,
-          max = 20,
-          step = 1
-        ),
-
-        numericInput(
-          inputId = ns("tme_cluster_max_nc"),
-          label = "Max Clusters",
-          value = 6,
-          min = 2,
-          max = 20,
-          step = 1
-        )
+        numericInput(ns("tme_cluster_min_nc"), "Min Clusters", value = 2, min = 2, max = 20, step = 1),
+        numericInput(ns("tme_cluster_max_nc"), "Max Clusters", value = 6, min = 2, max = 20, step = 1)
       ),
 
       dataDownloadUI(ns("download"))
     ),
 
-
     # Right Panel: Plots and Data
     column(
       width = 9,
+
       bs4Card(
         title = "Plot and Data",
         status = "gray",
@@ -112,10 +102,11 @@ tme_clusterBodyUI <- function(id, include_upload = TRUE, only_table = FALSE) {
           tabBox,
           c(
             list(width = 12, side = "left"),
-            # 逻辑：如果不是仅表格模式，显示Plot, Data, Cluster
+
             if (!isTRUE(only_table)) {
               list(
-                tabPanel("Plot", 
+                tabPanel(
+                  "Plot",
                   plotDownloadUI(ns("plot_download")),
                   uiOutput(ns("tme_cluster_plot_container"))
                 ),
@@ -123,7 +114,6 @@ tme_clusterBodyUI <- function(id, include_upload = TRUE, only_table = FALSE) {
                 tabPanel("Cluster", textOutput(ns("tme_cluster_cluster")))
               )
             } else {
-              # 逻辑：如果是仅表格模式，只显示 Data, Cluster
               list(
                 tabPanel("Data", dataTableUI(ns("tbl_data"))),
                 tabPanel("Cluster", textOutput(ns("tme_cluster_cluster")))
@@ -141,46 +131,41 @@ tme_clusterBodyUI <- function(id, include_upload = TRUE, only_table = FALSE) {
 tme_clusterServer <- function(id, external_eset = NULL, only_table = FALSE) {
   moduleServer(id, function(input, output, session) {
 
-    # 1. 获取输入数据
-    input_data <- if (!is.null(external_eset)) {
-      external_eset
-    } else {
-      uploadServer("upload")
-    }
+    # 1. Input data
+    input_data <- if (!is.null(external_eset)) external_eset else uploadServer("upload")
 
-    # 2. 监听数据变化，更新 Features 选项
+    # Result cache
+    tme_cluster_result <- reactiveVal(NULL)
+    tme_cluster_plot <- reactiveVal(NULL)
+
+    # 2. Update feature choices
     observeEvent(input_data(), {
       req(input_data())
-      data <- input_data()
 
-      colnames(data) <- gsub("\\.", "-", colnames(data))  # 清洗列名
+      data <- input_data()
+      colnames(data) <- gsub("\\.", "-", colnames(data))
 
       all_cols <- colnames(data)
       is_num <- sapply(data, is.numeric)
       pool_numeric <- all_cols[is_num]
 
-      # 排除临床列
       blacklist_pattern <- "(^|_)(time|status|os|event|censored|days|months|years|fustat|futime|rfs|pfs|dfs)(_|$)"
       is_clinical <- grepl(blacklist_pattern, pool_numeric, ignore.case = TRUE)
-
       numeric_cols <- pool_numeric[!is_clinical]
 
       updatePickerInput(
         session = session,
         inputId = "tme_cluster_features",
         choices = numeric_cols,
-        selected = numeric_cols
+        selected = character(0)
       )
     })
 
-    tme_cluster_result <- reactiveVal(NULL)
-    tme_cluster_plot   <- reactiveVal(NULL)
-
-    # 3. 运行分析
+    # 3. Run clustering
     observeEvent(input$run_tme_cluster, {
       req(input_data())
-      data <- input_data()
 
+      data <- input_data()
       colnames(data) <- gsub("\\.", "-", colnames(data))
 
       if (is.null(input$tme_cluster_features) || length(input$tme_cluster_features) == 0) {
@@ -189,18 +174,17 @@ tme_clusterServer <- function(id, external_eset = NULL, only_table = FALSE) {
       }
 
       withProgress(message = "Running tme_cluster analysis...", value = 0, {
-
         setProgress(0.3, message = "Clustering...")
 
         result <- tryCatch({
           tme_cluster(
-            input    = data,
+            input = data,
             features = input$tme_cluster_features,
-            pattern  = NULL,
-            id       = "ID",
-            method   = "kmeans",
-            min_nc   = input$tme_cluster_min_nc,
-            max.nc   = input$tme_cluster_max_nc
+            pattern = NULL,
+            id = "ID",
+            method = "kmeans",
+            min_nc = input$tme_cluster_min_nc,
+            max.nc = input$tme_cluster_max_nc
           )
         }, error = function(e) {
           showNotification(paste("Error:", e$message), type = "error")
@@ -209,11 +193,29 @@ tme_clusterServer <- function(id, external_eset = NULL, only_table = FALSE) {
 
         req(result)
 
-        tme_cluster_result(result)
+        # 提取聚类标签
+        cluster_info <- result[, c("ID", "cluster"), drop = FALSE]
+        cluster_info$ID <- as.character(cluster_info$ID)
 
-        # 只有 only_table = FALSE 时才生成热图对象
+        # 提取原始数据中的全部数值 features
+        all_features <- setdiff(colnames(data), c("ID", "cluster"))
+        all_features <- all_features[vapply(data[, all_features, drop = FALSE], is.numeric, logical(1))]
+
+        # 对全部原始 features 进行标准化
+        scaled_data <- as.data.frame(scale(data[, all_features, drop = FALSE], center = TRUE, scale = TRUE))
+
+        # 加回 ID
+        scaled_data$ID <- as.character(data$ID)
+        scaled_data <- dplyr::relocate(scaled_data, ID)
+
+        # 加入 cluster，并放在 ID 后面
+        result_for_output <- dplyr::left_join(scaled_data, cluster_info, by = "ID") %>%
+          dplyr::relocate(cluster, .after = ID)
+
+        tme_cluster_result(result_for_output)
+
+        # Only generate heatmap when only_table = FALSE
         if (!isTRUE(only_table)) {
-
           setProgress(0.7, message = "Generating heatmap...")
 
           valid_features <- input$tme_cluster_features[
@@ -228,30 +230,30 @@ tme_clusterServer <- function(id, external_eset = NULL, only_table = FALSE) {
 
           pp <- tryCatch({
             sig_heatmap(
-              input                 = result,
-              id                    = "ID",
-              features              = valid_features,
-              group                 = "cluster",
-              condition             = NULL,
-              id_condition          = "vars",
-              col_condition         = "condiction",
-              cols_condition        = NULL,
-              scale                 = FALSE,
-              palette               = 2,
-              cols_heatmap          = NULL,
-              palette_group         = "jama",
-              show_col              = FALSE,
-              show_palettes         = FALSE,
-              cols_group            = NULL,
-              show_plot             = FALSE,
-              width                 = 8,
-              height                = 6,
-              size_row              = 8,
-              column_title          = NULL,
-              row_title             = NULL,
+              input = result,
+              id = "ID",
+              features = valid_features,
+              group = "cluster",
+              condition = NULL,
+              id_condition = "vars",
+              col_condition = "condiction",
+              cols_condition = NULL,
+              scale = FALSE,
+              palette = 2,
+              cols_heatmap = NULL,
+              palette_group = "jama",
+              show_col = FALSE,
+              show_palettes = FALSE,
+              cols_group = NULL,
+              show_plot = FALSE,
+              width = 8,
+              height = 6,
+              size_row = 8,
+              column_title = NULL,
+              row_title = NULL,
               show_heatmap_col_name = FALSE,
-              path                  = NULL,
-              index                 = 1
+              path = NULL,
+              index = 1
             )
           }, error = function(e) {
             showNotification(paste("Heatmap error:", e$message), type = "error")
@@ -265,14 +267,35 @@ tme_clusterServer <- function(id, external_eset = NULL, only_table = FALSE) {
       })
     })
 
-    # 4. Outputs
+    # 4. Select downstream and download data
+    res_for_downstream <- reactive({
+      req(input_data())
 
-    # 表格
+      # 未选择 Features：跳过聚类
+      if (is.null(input$tme_cluster_features) || length(input$tme_cluster_features) == 0) {
+        data_original <- input_data()
+        if (!is.null(colnames(data_original))) colnames(data_original) <- gsub("\\.", "-", colnames(data_original))
+        return(data_original)
+      }
+
+      # 已选择 Features：必须运行聚类
+      validate(
+        need(
+          !is.null(tme_cluster_result()),
+          "Please run TME Clustering first."
+        )
+      )
+
+      tme_cluster_result()
+    })
+
+    # 5. Data table
     dataTableServer("tbl_data", tme_cluster_result)
 
-    # 分组统计文本
+    # 6. Cluster summary
     output$tme_cluster_cluster <- renderText({
       req(tme_cluster_result())
+
       res <- tme_cluster_result()
 
       if ("cluster" %in% colnames(res)) {
@@ -283,14 +306,9 @@ tme_clusterServer <- function(id, external_eset = NULL, only_table = FALSE) {
       }
     })
 
-    # 图形：仅在 only_table = FALSE 时渲染
+    # 7. Plot
     if (!isTRUE(only_table)) {
-
-      dims <- plotDownloadServer(
-        id = "plot_download",
-        plot_reactive = tme_cluster_plot,
-        filename_prefix = "tme_cluster_heatmap"
-      )
+      dims <- plotDownloadServer("plot_download", plot_reactive = tme_cluster_plot, filename_prefix = "tme_cluster_heatmap")
 
       output$tme_cluster_plot <- renderPlot({
         req(tme_cluster_plot())
@@ -304,21 +322,17 @@ tme_clusterServer <- function(id, external_eset = NULL, only_table = FALSE) {
           style = "overflow: auto;",
           plotOutput(
             session$ns("tme_cluster_plot"),
-            width  = paste0(dims$width(), "px"),
+            width = paste0(dims$width(), "px"),
             height = paste0(dims$height(), "px")
           )
         )
       })
     }
 
-    # 数据下载
-    dataDownloadServer(
-      "download",
-      data_reactive = tme_cluster_result,
-      filename_prefix = "tme_cluster_result"
-    )
+    # 8. Download selected data
+    dataDownloadServer("download", data_reactive = res_for_downstream, filename_prefix = "tme_cluster_step_output")
 
-    # 返回结果
-    return(tme_cluster_result)
+    # 9. Return selected data
+    return(res_for_downstream)
   })
 }
