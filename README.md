@@ -22,9 +22,9 @@
 <p align="center">
   <a href="https://iobr.github.io/IOBRportal/"><strong>Launch IOBRportal</strong></a>
   ·
-  <a href="https://qingcongl.github.io/IOBRportal_book/"><strong>Read the documentation<strong></a>
+  <a href="https://qingcongl.github.io/IOBRportal_book/"><strong>Read the documentation</strong></a>
   ·
-  <a href="#-installation"><strong>Install the R package<strong></a>
+  <a href="#-installation"><strong>Install the R package</strong></a>
 </p>
 
 ## 🧭 Overview
@@ -34,7 +34,7 @@ IOBRportal is an R package and Shiny-based web platform for bulk transcriptome a
 Users can either run analyses in the online application or install the R package for local, upload-based workflows.
 
 <p align="center">
-  <img src="man/figures/IOBRportal_overview.png" width="100%" alt="IOBRportal overview">
+  <img src="man/figures/IOBRportal_overview.png" width="99%" alt="IOBRportal overview">
 </p>
 
 ## 🔄 Analysis workflow
