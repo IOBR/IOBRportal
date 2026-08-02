@@ -22,9 +22,9 @@
 <p align="center">
   <a href="https://iobr.github.io/IOBRportal/"><strong>Launch IOBRportal</strong></a>
   ·
-  <a href="https://qingcongl.github.io/IOBRportal_book/">Read the documentation</a>
+  <a href="https://qingcongl.github.io/IOBRportal_book/"><strong>Read the documentation<strong></a>
   ·
-  <a href="#-installation">Install the R package</a>
+  <a href="#-installation"><strong>Install the R package<strong></a>
 </p>
 
 ## 🧭 Overview
@@ -34,7 +34,7 @@ IOBRportal is an R package and Shiny-based web platform for bulk transcriptome a
 Users can either run analyses in the online application or install the R package for local, upload-based workflows.
 
 <p align="center">
-  <img src="man/figures/IOBRportal_overview.png" width="95%" alt="IOBRportal overview">
+  <img src="man/figures/IOBRportal_overview.png" width="100%" alt="IOBRportal overview">
 </p>
 
 ## 🔄 Analysis workflow
@@ -101,19 +101,12 @@ In addition to these curated resources, IOBRportal supports user-uploaded expres
 
 ### 🎨 Visualization
 
-- heatmap
-- box plot
-- percent bar plot
-- cell bar plot
-- forest plot
-- correlation plot
-- correlation matrix plot
-- survival plot
-- survival group plot
-- time-dependent ROC plot
-- signature ROC plot
-- GSEA plot
-- oncoprints
+- heatmap and box plot
+- percent bar plot and cell bar plot
+- correlation plot and correlation matrix plot
+- forest plot and survival plot and survival group plot
+- time-dependent ROC plot and signature ROC plot
+- GSEA plot and oncoprints
 
 ## 📦 Installation
 
@@ -135,7 +128,7 @@ run_iobrportal()
 ```
 
 > [!IMPORTANT]
-> The local package supports upload-based workflows. Database-backed cohort resources are provided in the fully configured online deployment and may require separate data configuration in a local deployment.
+> The local package supports upload-based workflows without cohort resources. Database-backed cohort resources are provided in the fully configured online deployment.
 
 ## 📊 Outputs
 
@@ -154,7 +147,7 @@ Detailed tutorials, example datasets, parameter descriptions, and workflow demon
 
 ## 📝 Citation
 
-If you use IOBRportal in your research, please cite the IOBRportal paper or preprint when available, the original methods used in your analysis, and the following IOBR ecosystem papers:
+If you use IOBR ecosystem in your research, please cite the original methods used in your analysis, and the following IOBR ecosystem papers:
 
 1. Zeng D, Fang Y, et al. **Enhancing immuno-oncology investigations through multidimensional decoding of tumor microenvironment with IOBR 2.0.** *Cell Reports Methods*. 2024;4:100910. [doi:10.1016/j.crmeth.2024.100910](https://doi.org/10.1016/j.crmeth.2024.100910)
 
