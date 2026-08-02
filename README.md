@@ -19,14 +19,6 @@
   <a href="https://github.com/IOBR/IOBRportal/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=flat-square" alt="GPL-3.0 license"></a>
 </p>
 
-<p align="center">
-  <a href="https://iobr.github.io/IOBRportal/"><strong>Launch IOBRportal</strong></a>
-  ·
-  <a href="https://qingcongl.github.io/IOBRportal_book/"><strong>Read the documentation</strong></a>
-  ·
-  <a href="#-installation"><strong>Install the R package</strong></a>
-</p>
-
 ## 🧭 Overview
 
 IOBRportal is an R package and Shiny-based web platform for bulk transcriptome and immuno-oncology studies. Built on the IOBR analytical framework, it connects data preparation, signature scoring, tumor microenvironment (TME) deconvolution, clustering, mutation analysis, statistical testing, interactive visualization, and result export in a unified environment.
@@ -39,8 +31,6 @@ Users can either run analyses in the online application or install the R package
 
 ## 🔄 Analysis workflow
 
-IOBRportal supports continuous analysis from expression or mutation data to interpretable tables and publication-ready figures.
-
 <p align="center">
   <img src="man/figures/IOBRportal_workflow.png" width="100%" alt="IOBRportal analysis workflow">
 </p>
@@ -49,7 +39,7 @@ IOBRportal supports continuous analysis from expression or mutation data to inte
 
 | Mode | Best for | Access |
 |:--|:--|:--|
-| 🌐 **Web application** | Interactive analysis without writing R code; includes the full set of configured cohort resources | [Primary server](https://iobr.github.io/IOBRportal/) · [Backup server](https://lisom.work/shinyapps/IOBRportal/) |
+| 🌐 **Web application** | Interactive analysis without writing R code; includes the full set of configured cohort resources | [IOBRportal](https://iobr.github.io/IOBRportal/) · [Backup server](https://lisom.work/shinyapps/IOBRportal/) |
 | 📦 **R package** | Local deployment and analysis of user-uploaded expression, phenotype, survival, and mutation data | [Install from GitHub](#-installation) |
 
 ## 🧩 Workflows
