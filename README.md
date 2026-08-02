@@ -1,110 +1,85 @@
-# IOBRportal
-
-<!-- badges: start -->
-<!-- badges: end -->
-
-IOBRportal is an R package and Shiny-based web platform for bulk transcriptome and immuno-oncology studies. It integrates signature score calculation, TME deconvolution, clustering, visualization, mutation analysis, signature-gene correlation analysis and cohort-oriented workflows into a unified analysis environment. More information is available in the [IOBRportal Book](https://qingcongl.github.io/IOBRportal_book/). Access the application here: https://iobr.github.io/IOBRportal/.
+<table>
+  <tr>
+    <td width="190" align="center" valign="middle">
+      <img src="man/figures/IOBRportal.png" width="150" alt="IOBRportal logo">
+    </td>
+    <td valign="middle">
+      <h1>IOBRportal</h1>
+      <p><strong>An interactive platform for bulk transcriptome and immuno-oncology research</strong></p>
+      <p>From expression matrices and mutation data to tumor microenvironment profiling, statistical analysis, and publication-ready results.</p>
+    </td>
+  </tr>
+</table>
 
 <p align="center">
-  <img src="man/figures/IOBRportal.png" width="180">
+  <a href="https://iobr.github.io/IOBRportal/"><img src="https://img.shields.io/badge/Web%20application-Launch-0078D4?style=flat-square&logo=googlechrome&logoColor=white" alt="Launch web application"></a>
+  <a href="https://qingcongl.github.io/IOBRportal_book/"><img src="https://img.shields.io/badge/Documentation-IOBRportal%20Book-2E8B57?style=flat-square&logo=gitbook&logoColor=white" alt="IOBRportal Book"></a>
+  <a href="https://github.com/IOBR/IOBRportal"><img src="https://img.shields.io/badge/R%20package-GitHub-276DC3?style=flat-square&logo=r&logoColor=white" alt="R package"></a>
+  <a href="https://github.com/IOBR/IOBRportal/issues"><img src="https://img.shields.io/github/issues/IOBR/IOBRportal?style=flat-square" alt="GitHub issues"></a>
+  <a href="https://github.com/IOBR/IOBRportal/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=flat-square" alt="GPL-3.0 license"></a>
+</p>
+
+<p align="center">
+  <a href="https://iobr.github.io/IOBRportal/"><strong>Launch IOBRportal</strong></a>
+  ·
+  <a href="https://qingcongl.github.io/IOBRportal_book/">Read the documentation</a>
+  ·
+  <a href="#-installation">Install the R package</a>
 </p>
 
 ## 🧭 Overview
 
-IOBRportal is designed to connect data preparation, feature generation, statistical analysis, and interactive visualization in one package-oriented framework. It supports both module-level analyses and workflow-level pipelines, allowing users to move from raw expression matrices or curated cohort tables to interpretable results in a reproducible manner.
+IOBRportal is an R package and Shiny-based web platform for bulk transcriptome and immuno-oncology studies. Built on the IOBR analytical framework, it connects data preparation, signature scoring, tumor microenvironment (TME) deconvolution, clustering, mutation analysis, statistical testing, interactive visualization, and result export in a unified environment.
 
-![](man/figures/IOBRportal_overview.png)
+Users can either run analyses in the online application or install the R package for local, upload-based workflows.
 
-## 🔄 Main workflows
+<p align="center">
+  <img src="man/figures/IOBRportal_overview.png" width="95%" alt="IOBRportal overview">
+</p>
 
-### 1. Integrated Workflow
+## 🔄 Analysis workflow
 
-This workflow is designed for user-uploaded data and supports:
+IOBRportal supports continuous analysis from expression or mutation data to interpretable tables and publication-ready figures.
 
-- counts to TPM conversion
-- outlier detection
-- signature scoring or TME deconvolution
-- clustering
-- phenotype combination
-- downstream visualization and statistical analysis
+<p align="center">
+  <img src="man/figures/IOBRportal_workflow.png" width="100%" alt="IOBRportal analysis workflow">
+</p>
 
-### 2. Mutation Workflow
+## 🚀 Choose how to use IOBRportal
 
-This workflow supports:
+| Mode | Best for | Access |
+|:--|:--|:--|
+| 🌐 **Web application** | Interactive analysis without writing R code; includes the full set of configured cohort resources | [Primary server](https://iobr.github.io/IOBRportal/) · [Backup server](https://lisom.work/shinyapps/IOBRportal/) |
+| 📦 **R package** | Local deployment and analysis of user-uploaded expression, phenotype, survival, and mutation data | [Install from GitHub](#-installation) |
 
-- mutation matrix construction from MAF files
-- phenotype-associated mutation analysis
-- oncoprint generation
-- mutation-associated boxplot generation
+## 🧩 Workflows
 
-### 3. Signature-Gene Workflow
-
-This workflow supports:
-
-- TPM preprocessing
-- outlier removal
-- signature calculation
-- signature-gene correlation analysis
-- correlation matrix construction
+| Workflow | Input or resource | Main capabilities |
+|:--|:--|:--|
+| 🧬 **Integrated Workflow** | User-uploaded expression and phenotype data | Annotation, counts-to-TPM conversion, outlier detection, signature scoring or TME deconvolution, clustering, phenotype integration, visualization, and statistical analysis |
+| 🧫 **Mutation Workflow** | User-uploaded MAF data | Mutation-matrix construction, phenotype- or signature-associated mutation analysis, oncoprints, box plots, and survival analysis |
+| 🔗 **Signature-Gene Workflow** | Expression matrices | TPM preprocessing, outlier removal, signature scoring, signature-gene correlation, and correlation-matrix construction |
 
 ## 🗂️ Cohort resources
 
-### 1. TCGA Cohorts
+IOBRportal currently incorporates **64,362 samples**, **396 datasets**, and **36 cancer types**. Public resources are organized into four entry categories:
 
-This workflow is designed for TCGA cohort analysis and supports:
+- 🧬 **TCGA** — TCGA transcriptomic, clinical, TME, signature, and mutation resources
+- 💉 **IMMC** — curated immunotherapy cohorts
+- 🎗️ **MOLC** — curated cancer cohorts, primarily derived from GEO
+- 🧫 **CLIC** — CPTAC and TARGET cohorts
 
-- cohort selection
-- signature or TME data preparation
-- clustering
-- visualization
-- survival analysis
-- correlation analysis
-- group comparison
+In addition to these curated resources, IOBRportal supports user-uploaded expression, phenotype, survival, and mutation data.
 
-### 2. Cancer Cohorts
+## ✨ Key features
 
-This workflow is designed for curated cancer cohort datasets and supports:
+### 🧮 Signature scoring
 
-- data selection
-- signature or TME preparation
-- clustering
-- visualization
-- correlation analysis
-- group comparison
-
-### 3. Immunotherapy Cohorts
-
-This workflow is designed for immunotherapy-focused datasets and supports:
-
-- filtering by cancer type, treatment, drug, and timepoint
-- signature or TME extraction
-- clustering
-- visualization
-- correlation analysis
-- group comparison
-
-### 4. Other Cohorts
-
-This workflow is designed for CPTAC/TARGET-style datasets and supports:
-
-- cohort selection
-- signature or TME data preparation
-- clustering
-- visualization
-- survival analysis
-- correlation analysis
-- group comparison
-
-## ✨ Features
-
-### Signature score calculation
-
-- PCA-based signature scoring
-- ssGSEA-based signature scoring
-- Z-score-based signature scoring
+- PCA-, ssGSEA-, and Z-score-based scoring
 - multiple built-in signature collections
+- batch calculation and integration with phenotype data
 
-### Tumor microenvironment deconvolution
+### 🔬 Tumor microenvironment deconvolution
 
 - CIBERSORT
 - EPIC
@@ -116,7 +91,7 @@ This workflow is designed for CPTAC/TARGET-style datasets and supports:
 - IPS
 - integration mode for combined TME estimation
 
-### Statistical analysis
+### 📈 Statistical analysis
 
 - batch correlation
 - partial correlation
@@ -124,7 +99,7 @@ This workflow is designed for CPTAC/TARGET-style datasets and supports:
 - Wilcoxon test
 - Kruskal-Wallis test
 
-### Visualization
+### 🎨 Visualization
 
 - heatmap
 - box plot
@@ -137,64 +112,60 @@ This workflow is designed for CPTAC/TARGET-style datasets and supports:
 - survival group plot
 - time-dependent ROC plot
 - signature ROC plot
-- gsea plot
+- GSEA plot
+- oncoprints
 
-<!-- ## 📦 Installation
+## 📦 Installation
 
-You can install the development version from GitHub:
+Install the development version from GitHub:
 
 ```r
-# install.packages("remotes")
-remotes::install_github("IOBR/IOBRportal")
+if (!requireNamespace("remotes", quietly = TRUE)) {
+  install.packages("remotes")
+}
 
+remotes::install_github("IOBR/IOBRportal", dependencies = TRUE)
 ```
 
-Then load the package:
+Load the package and launch the local Shiny application:
 
 ```r
 library(IOBRportal)
-
+run_iobrportal()
 ```
-For the interactive Shiny interface:
 
-```r
-run_shinyapp()
-
-```
-Some cohort-oriented modules in local deployments may require separately configured external data resources. -->
+> [!IMPORTANT]
+> The local package supports upload-based workflows. Database-backed cohort resources are provided in the fully configured online deployment and may require separate data configuration in a local deployment.
 
 ## 📊 Outputs
 
-Typical outputs generated by IOBRportal include:
+IOBRportal generates downloadable analysis objects and publication-ready visualizations, including:
 
-- processed expression matrices
-- signature score matrices
-- TME deconvolution tables
-- cluster assignments
-- combined phenotype-feature tables
-- survival statistics
-- correlation statistics
-- group comparison results
-- mutation result tables
-- publication-ready figures
+- processed expression and mutation matrices
+- signature-score and TME-deconvolution tables
+- cluster assignments and integrated phenotype-feature tables
+- survival, correlation, and group-comparison statistics
+- mutation-association result tables
+- figures in publication-ready formats
 
-<!-- ## 💻 Shiny application
+## 📚 Documentation
 
-IOBRportal is a Shiny-based interactive interface for end-to-end analysis. The application supports both user-uploaded datasets and cohort-oriented resources in a unified workflow environment. In deployed full-data instances, database-backed cohort modules can be used for interactive analysis alongside upload-based workflows. -->
+Detailed tutorials, example datasets, parameter descriptions, and workflow demonstrations are available in the [IOBRportal Book](https://qingcongl.github.io/IOBRportal_book/).
 
 ## 📝 Citation
 
-If you use IOBRportal in your work, please cite:
+If you use IOBRportal in your research, please cite the IOBRportal paper or preprint when available, the original methods used in your analysis, and the following IOBR ecosystem papers:
 
-- the IOBRportal package paper or preprint, when available
-- the original methods implemented in the package, such as CIBERSORT, EPIC, xCell, ESTIMATE, TIMER, MCPcounter, quanTIseq, IPS, and related statistical tools
+1. Zeng D, Fang Y, et al. **Enhancing immuno-oncology investigations through multidimensional decoding of tumor microenvironment with IOBR 2.0.** *Cell Reports Methods*. 2024;4:100910. [doi:10.1016/j.crmeth.2024.100910](https://doi.org/10.1016/j.crmeth.2024.100910)
 
-## ✉️ Contact
+2. Fang Y, Kong Y, Rong G, Luo Q, Liao W, Zeng D. **Systematic investigation of tumor microenvironment and antitumor immunity with IOBR.** *Med Research*. 2025;1(1):136-140. [doi:10.1002/mdr2.70001](https://doi.org/10.1002/mdr2.70001)
 
-E-mail questions or bug reports to:
-- **Qingcong Luo** (qingcongl@163.com)
-- **Dr. Dongqiang Zeng** (interlaken@smu.edu.cn)
+## 💬 Support
+
+- Report bugs or request features through [GitHub Issues](https://github.com/IOBR/IOBRportal/issues).
+- E-mail **Qingcong Luo** at [qingcongl@163.com](mailto:qingcongl@163.com).
+- E-mail **Dr. Dongqiang Zeng** at [interlaken@smu.edu.cn](mailto:interlaken@smu.edu.cn).
 
 ## 📄 License
 
-IOBRportal is released under the GNU General Public License v3.0 (GPL-3).
+IOBRportal is released under the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html).
