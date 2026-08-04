@@ -13,7 +13,7 @@
 
 <p align="center">
   <a href="https://iobr.github.io/IOBRportal/"><img src="https://img.shields.io/badge/Web%20application-Launch-0078D4?style=flat-square&logo=googlechrome&logoColor=white" alt="Launch web application"></a>
-  <a href="https://qingcongl.github.io/IOBRportal_book/"><img src="https://img.shields.io/badge/Documentation-IOBRportal%20Book-2E8B57?style=flat-square&logo=gitbook&logoColor=white" alt="IOBRportal Book"></a>
+  <a href="https://iobr.github.io/IOBRportal_book/"><img src="https://img.shields.io/badge/Documentation-IOBRportal%20Book-2E8B57?style=flat-square&logo=gitbook&logoColor=white" alt="IOBRportal Book"></a>
   <a href="https://github.com/IOBR/IOBRportal"><img src="https://img.shields.io/badge/R%20package-GitHub-276DC3?style=flat-square&logo=r&logoColor=white" alt="R package"></a>
   <a href="https://github.com/IOBR/IOBRportal/issues"><img src="https://img.shields.io/github/issues/IOBR/IOBRportal?style=flat-square" alt="GitHub issues"></a>
   <a href="https://github.com/IOBR/IOBRportal/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=flat-square" alt="GPL-3.0 license"></a>
@@ -133,7 +133,7 @@ IOBRportal generates downloadable analysis objects and publication-ready visuali
 
 ## 📚 Documentation
 
-Detailed tutorials, example datasets, parameter descriptions, and workflow demonstrations are available in the [IOBRportal Book](https://qingcongl.github.io/IOBRportal_book/).
+Detailed tutorials, example datasets, parameter descriptions, and workflow demonstrations are available in the [IOBRportal Book](https://iobr.github.io/IOBRportal_book/).
 
 ## 📝 Citation
 
