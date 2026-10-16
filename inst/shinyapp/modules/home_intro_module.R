@@ -355,14 +355,13 @@ home_introUI <- function(id) {
           ),
           div(
             style = "width: 240px; max-width: 100%; margin: 0 auto;",
-            tags$img(
-              src = "https://mapmyvisitors.com/map.png?cl=ffffff&w=240&t=m&d=E_nRFNN03offGkQt3BBMZgjUYSm_Xw5x4XbXMeW-p64",
-              alt = "IOBRportal visitor statistics",
-              style = paste(
-                "display: block; width: 100%; height: auto;",
-                "border-radius: 8px;"
-              )
-            )
+            HTML('
+              <script
+                type = "text/javascript"
+                id = "mapmyvisitors"
+                src="https://mapmyvisitors.com/map.js?d=E_nRFNN03offGkQt3BBMZgjUYSm_Xw5x4XbXMeW-p64&cl=ffffff&w=240">
+              </script>
+            ')
           ),
           tags$a(
             "View detailed statistics ↗",
