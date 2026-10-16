@@ -308,9 +308,9 @@ home_introUI <- function(id) {
           tags$div(
             class = "iobr-resource-item",
             HTML("📖 <b>Detailed Tutorial:</b>
-             <a href='https://qingcongl.github.io/IOBRportal_book/'
+             <a href='https://iobr.github.io/IOBRportal_book/'
                 target='_blank'>
-               https://qingcongl.github.io/IOBRportal_book/
+               https://iobr.github.io/IOBRportal_book/
              </a>")
           ),
           tags$div(
