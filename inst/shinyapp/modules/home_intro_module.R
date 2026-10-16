@@ -213,24 +213,19 @@ home_introUI <- function(id) {
     div(
       class = "iobr-hero-card",
       fluidRow(
-
         column(
           width = 8,
-
           div(
             class = "iobr-hero-left-main",
             tags$div(class = "iobr-hero-title", "IOBRportal at a glance"),
-
             tags$p(
               class = "iobr-hero-subtitle",
               "Explore modular tools and pre-defined workflows for end-to-end TME and immuno-oncology analyses. IOBRportal provides an integrated interface for transcriptome preprocessing, signature scoring, TME deconvolution, statistical analysis, and visualization."
             ),
-
             tags$p(
               class = "iobr-hero-subtitle",
               "The portal provides both function-oriented tools and workflow-oriented analysis routes, allowing users to start from individual tasks or follow guided pipelines for end-to-end interpretation in a unified and reproducible interface."
             ),
-
             tags$p(
               class = "iobr-hero-subtitle",
               "It is designed for both pre-integrated public cohorts and user-uploaded datasets. For dataset scale, cohort composition, and distribution statistics, please refer to Workflows → Datasets → Overview."
@@ -272,10 +267,8 @@ home_introUI <- function(id) {
             )
           )
         ),
-
         column(
           width = 4,
-
           div(
             class = "iobr-mini-card",
             tags$div(class = "icon-wrap", style = "background:#eef5ff; color:#1f78ff;", icon("project-diagram")),
@@ -299,27 +292,87 @@ home_introUI <- function(id) {
     ),
 
 
-
     # =========================================================
     # 3) LEARNING RESOURCES (No jump buttons)
     # =========================================================
-    fluidRow(
-      column(
-        width = 12,
-        div(
-          class = "iobr-resource-card",
-          tags$div(class = "iobr-resource-title", "Learning Resources"),
+    div(
+      class = "iobr-resource-card",
+      fluidRow(
+        style = "align-items: center;",
+        column(
+          width = 8,
           tags$div(
-            class = "iobr-resource-item",
-            HTML("📖 <b>Detailed Tutorial:</b> <a href='https://qingcongl.github.io/IOBRportal_book/' target='_blank'>https://qingcongl.github.io/IOBRportal_book/</a>")
+            class = "iobr-resource-title",
+            "Learning Resources"
           ),
           tags$div(
             class = "iobr-resource-item",
-            HTML("💻 <b>Code Repository:</b> <a href='https://github.com/IOBR/IOBRportal' target='_blank'>https://github.com/IOBR/IOBRportal</a>")
+            HTML("📖 <b>Detailed Tutorial:</b>
+             <a href='https://qingcongl.github.io/IOBRportal_book/'
+                target='_blank'>
+               https://qingcongl.github.io/IOBRportal_book/
+             </a>")
           ),
           tags$div(
             class = "iobr-resource-item",
-            HTML("🌐 <b>Web Portal:</b> <a href='https://iobr.github.io/IOBRportal' target='_blank'>https://iobr.github.io/IOBRportal</a>")
+            HTML("💻 <b>Code Repository:</b>
+             <a href='https://github.com/IOBR/IOBRportal'
+                target='_blank'>
+               https://github.com/IOBR/IOBRportal
+             </a>")
+          ),
+          tags$div(
+            class = "iobr-resource-item",
+            HTML("🌐 <b>Web Portal:</b>
+             <a href='https://iobr.github.io/IOBRportal/'
+                target='_blank'>
+               https://iobr.github.io/IOBRportal/
+             </a>")
+          ),
+          tags$div(
+            class = "iobr-resource-item",
+            # style = "margin-top: 10px; font-size: 0.9rem; line-height: 1.6;",
+            tags$b("📄 Citation: "),
+            HTML("
+              Luo Q, Qian H, Liu Y, ... , Wang S, Zeng D.
+              <b>IOBRportal: a cloud-based integrated platform for
+              multidimensional decoding of tumor microenvironment
+              and genomic landscapes.</b>
+              <i>Cancer Immunol Immunother</i>. 2026.
+              https://doi.org/10.1007/s00262-026-04540-7
+            ")
+          )
+        ),
+        column(
+          width = 4,
+          style = "text-align: center;",
+          tags$div(
+            "Visitor Statistics",
+            style = paste(
+              "font-size: 14px; font-weight: 600;",
+              "color: #64748b; margin-bottom: 8px;"
+            )
+          ),
+          div(
+            style = "width: 240px; max-width: 100%; margin: 0 auto;",
+            tags$img(
+              src = "https://mapmyvisitors.com/map.png?cl=ffffff&w=240&t=m&d=E_nRFNN03offGkQt3BBMZgjUYSm_Xw5x4XbXMeW-p64",
+              alt = "IOBRportal visitor statistics",
+              style = paste(
+                "display: block; width: 100%; height: auto;",
+                "border-radius: 8px;"
+              )
+            )
+          ),
+          tags$a(
+            "View detailed statistics ↗",
+            href = "https://mapmyvisitors.com/web/1c8wf",
+            target = "_blank",
+            rel = "noopener noreferrer",
+            style = paste(
+              "display: inline-block; margin-top: 7px;",
+              "font-size: 12px; color: #64748b;"
+            )
           )
         )
       )
