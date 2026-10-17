@@ -308,9 +308,9 @@ home_introUI <- function(id) {
           tags$div(
             class = "iobr-resource-item",
             HTML("📖 <b>Detailed Tutorial:</b>
-             <a href='https://qingcongl.github.io/IOBRportal_book/'
+             <a href='https://iobr.github.io/IOBRportal_book/'
                 target='_blank'>
-               https://qingcongl.github.io/IOBRportal_book/
+               https://iobr.github.io/IOBRportal_book/
              </a>")
           ),
           tags$div(
@@ -343,37 +343,38 @@ home_introUI <- function(id) {
             ")
           )
         ),
-        column(
-          width = 4,
-          style = "text-align: center;",
-          tags$div(
-            "Visitor Statistics",
-            style = paste(
-              "font-size: 14px; font-weight: 600;",
-              "color: #64748b; margin-bottom: 8px;"
-            )
-          ),
-          div(
-            style = "width: 240px; max-width: 100%; margin: 0 auto;",
-            HTML('
-              <script
-                type = "text/javascript"
-                id = "mapmyvisitors"
-                src="https://mapmyvisitors.com/map.js?d=E_nRFNN03offGkQt3BBMZgjUYSm_Xw5x4XbXMeW-p64&cl=ffffff&w=240">
-              </script>
-            ')
-          ),
-          tags$a(
-            "View detailed statistics ↗",
-            href = "https://mapmyvisitors.com/web/1c8wf",
-            target = "_blank",
-            rel = "noopener noreferrer",
-            style = paste(
-              "display: inline-block; margin-top: 7px;",
-              "font-size: 12px; color: #64748b;"
-            )
-          )
-        )
+        # column(
+        #   width = 4,
+        #   style = "text-align: center;",
+        #   tags$div(
+        #     "Visitor Statistics",
+        #     style = paste(
+        #       "font-size: 14px; font-weight: 600;",
+        #       "color: #64748b; margin-bottom: 8px;"
+        #     )
+        #   ),
+        #   div(
+        #     style = "width: 240px; max-width: 100%; margin: 0 auto;",
+        #     HTML('
+        #       <script
+        #         type = "text/javascript"
+        #         id = "mapmyvisitors"
+        #         src="https://mapmyvisitors.com/map.js?d=E_nRFNN03offGkQt3BBMZgjUYSm_Xw5x4XbXMeW-p64&cl=ffffff&w=240">
+        #       </script>
+        #     ')
+        #   ),
+        #   tags$a(
+        #     "View detailed statistics ↗",
+        #     href = "https://mapmyvisitors.com/web/1c8wf",
+        #     target = "_blank",
+        #     rel = "noopener noreferrer",
+        #     style = paste(
+        #       "display: inline-block; margin-top: 7px;",
+        #       "font-size: 12px; color: #64748b;"
+        #     )
+        #   )
+        # )
+        iobr_visits_ui()
       )
     )
   )

@@ -12,25 +12,21 @@ library(echarts4r)
 library(waiter)
 library(readxl)
 library(writexl)
+library(RSQLite)
 library(IOBR)
 
-options(shiny.maxRequestSize = 1024 * 1024^2)  # 设置最大上传文件大小为 1024MB
-# options(shiny.autoreload = TRUE) # 有改动即自动更新,不是更新选项的,是更新js啥的
-options(bitmapType = "cairo") # Linux 服务器用 Cairo 引擎来画图
-pdf(NULL) # 把找不到屏幕、偷偷摸摸生成的图扔进黑洞
+options(shiny.maxRequestSize = 1024 * 1024^2)
+options(bitmapType = "cairo")
+pdf(NULL)
 
 # ------------------------------
 # 1. Database mode
 # ------------------------------
-# 自动判断是否启用数据库模块：
-# 1) 如果 4 个真实 duckdb 文件都存在，则启用 TCGA / MOLC / IMMC / CLIC 数据库模块；
-# 2) 如果缺少任意一个 duckdb 文件，则进入 local mode，只保留用户上传数据相关功能。
-
 db_files <- c(
   tcga = "data/tcga.duckdb",
-  othercohort   = "data/othercohort.duckdb",
+  othercohort = "data/othercohort.duckdb",
   immunotherapy = "data/immunotherapy.duckdb",
-  cancercohort  = "data/cancercohort.duckdb"
+  cancercohort = "data/cancercohort.duckdb"
 )
 
 database_available <- all(file.exists(db_files))
@@ -45,12 +41,11 @@ if (database_available) {
 # ------------------------------
 # 2. Create database pools safely
 # ------------------------------
-# 延迟连接，不会打开所有连接
 make_duckdb_pool <- function(db_path) {
   if (!database_available) {
     return(NULL)
   }
-  
+
   pool::dbPool(
     drv = duckdb::duckdb(),
     dbdir = db_path,
@@ -61,10 +56,10 @@ make_duckdb_pool <- function(db_path) {
   )
 }
 
-tcga_pool          <- make_duckdb_pool(db_files[["tcga"]])
-othercohort_pool   <- make_duckdb_pool(db_files[["othercohort"]])
+tcga_pool <- make_duckdb_pool(db_files[["tcga"]])
+othercohort_pool <- make_duckdb_pool(db_files[["othercohort"]])
 immunotherapy_pool <- make_duckdb_pool(db_files[["immunotherapy"]])
-cancercohort_pool  <- make_duckdb_pool(db_files[["cancercohort"]])
+cancercohort_pool <- make_duckdb_pool(db_files[["cancercohort"]])
 
 
 # ------------------------------
@@ -95,6 +90,7 @@ source("modules/data_download_module.R")
 source("modules/dataTable_module.R")
 source("modules/plot_download_module.R")
 source("modules/privacy_cleanup_module.R")
+source("modules/visitor_stats_module.R")
 
 # functions
 source("modules/home_intro_module.R")
@@ -139,21 +135,20 @@ source("modules/workflow_mutation_module.R")
 source("modules/workflow_iobr_module.R")
 source("modules/workflow_siggenes_module.R")
 
-# 只有数据库可用时，才 source 数据库相关模块。
 if (database_available) {
   source("modules/datasets_overview_module.R")
   source("modules/workflow_tcga_module.R")
   source("modules/prepare_tcga_data_module.R")
-  
+
   source("modules/prepare_mutation_data_module.R")
   source("modules/workflow_tcga_mut_module.R")
-  
+
   source("modules/workflow_othercohort_module.R")
   source("modules/prepare_othercohort_data_module.R")
-  
+
   source("modules/workflow_immunotherapy_module.R")
   source("modules/prepare_immunotherapy_data_module.R")
-  
+
   source("modules/workflow_cancercohort_module.R")
   source("modules/prepare_cancercohort_data_module.R")
 }
@@ -164,48 +159,40 @@ if (database_available) {
 # ------------------------------
 
 database_sidebar_items <- list()
-database_tab_items     <- list()
+database_tab_items <- list()
 
 if (database_available) {
-  
   database_sidebar_items <- list(
     bs4SidebarMenuItem(
       text = "Datasets",
       tabName = NULL,
       icon = icon("database"),
       startExpanded = TRUE,
-      
       bs4SidebarMenuSubItem(
-        text = "Overview", 
+        text = "Overview",
         tabName = "datasets_overview",
         icon = icon("chart-pie")
       ),
-      
       bs4SidebarMenuSubItem(
         text = "TCGA · Signature and TME",
         tabName = "workflow_tcga",
         icon = icon("chart-line")
       ),
-      
       bs4SidebarMenuSubItem(
         text = "TCGA · Mutation",
         tabName = "workflow_tcga_mut",
         icon = icon("dna")
       ),
-
-      
       bs4SidebarMenuSubItem(
         text = "MOLC",
         tabName = "workflow_cancercohort",
-        icon = icon("globe") 
+        icon = icon("globe")
       ),
-      
       bs4SidebarMenuSubItem(
         text = "IMMC",
         tabName = "workflow_immunotherapy",
         icon = icon("syringe")
       ),
-      
       bs4SidebarMenuSubItem(
         text = "CLIC",
         tabName = "workflow_othercohort",
@@ -213,7 +200,7 @@ if (database_available) {
       )
     )
   )
-  
+
   database_tab_items <- list(
     datasets_overviewUI("mod_datasets_overview"),
     workflow_tcgaUI("mod_workflow_tcga"),
@@ -233,31 +220,26 @@ workflow_sidebar_menu <- do.call(
   bs4SidebarMenu,
   c(
     list(id = "workflow_menu"),
-    
     database_sidebar_items,
-    
     list(
       bs4SidebarMenuItem(
         text = "Workflows",
         tabName = NULL,
         icon = icon("project-diagram"),
         startExpanded = TRUE,
-        
         bs4SidebarMenuSubItem(
           text = "IOBR Workflows",
-          tabName = "workflow_iobr", 
+          tabName = "workflow_iobr",
           icon = icon("object-group")
         ),
-        
         bs4SidebarMenuSubItem(
-          text = "Mutation Workflows", 
-          tabName = "workflow_mutation", 
+          text = "Mutation Workflows",
+          tabName = "workflow_mutation",
           icon = icon("dna")
         ),
-        
         bs4SidebarMenuSubItem(
-          text = "Signature-Gene Workflows", 
-          tabName = "workflow_siggenes", 
+          text = "Signature-Gene Workflows",
+          tabName = "workflow_siggenes",
           icon = icon("chart-line")
         )
       )
@@ -273,7 +255,7 @@ workflow_sidebar_menu <- do.call(
 body_tab_items <- c(
   list(
     home_introUI("home_intro"),
-    
+
     # function
     count2tpmUI("mod_count2tpm"),
     anno_esetUI("mod_anno_eset"),
@@ -281,18 +263,15 @@ body_tab_items <- c(
     find_outlier_samplesUI("mod_find_outlier_samples"),
     remove_batcheffectUI("mod_remove_batcheffect"),
     mouse2human_esetUI("mod_mouse2human_eset"),
-    
     calculate_sig_scoreUI("mod_calculate_sig_score"),
     deconvo_tmeUI("mod_deconvo_tme"),
     tme_clusterUI("mod_tme_cluster"),
     lr_calUI("mod_lr_cal"),
-    
     batch_survUI("mod_batch_surv"),
     batch_corUI("mod_batch_cor"),
     batch_pccUI("mod_batch_pcc"),
     batch_wilcoxonUI("mod_batch_wilcoxon"),
     batch_kruskalUI("mod_batch_kruskal"),
-    
     sig_heatmapUI("mod_sig_heatmap"),
     sig_boxUI("mod_sig_box"),
     sig_surv_plotUI("mod_sig_surv_plot"),
@@ -307,16 +286,14 @@ body_tab_items <- c(
     percent_bar_plotUI("mod_percent_bar_plot"),
     sig_gseaUI("mod_sig_gsea"),
     find_markers_in_bulkUI("mod_find_markers_in_bulk"),
-    
     make_mut_matrixUI("mod_make_mut_matrix"),
     find_mutationsUI("mod_find_mutations"),
-    
+
     # workflow
     workflow_mutationUI("mod_workflow_mutation"),
     workflow_iobrUI("mod_workflow_iobr"),
     workflow_siggenesUI("mod_workflow_siggenes")
   ),
-  
   database_tab_items
 )
 
@@ -336,7 +313,6 @@ ui <- shinyUI(
     help = NULL,
     dark = FALSE,
     scrollToTop = TRUE,
-
     preloader = list(
       html = tagList(
         h4(
@@ -351,7 +327,6 @@ ui <- shinyUI(
         margin-bottom: 22px;
       "
         ),
-        
         div(
           id = "preloader-message",
           style = "
@@ -359,7 +334,6 @@ ui <- shinyUI(
         text-align: center;
         font-family: Arial, sans-serif;
       ",
-          
           p(
             "Large datasets may take a few seconds. Thank you for your patience.",
             style = "
@@ -370,15 +344,11 @@ ui <- shinyUI(
         "
           )
         ),
-        
         br(),
-        
         div(
           id = "preloader-spinner",
           waiter::spin_3()
         ),
-        
-        # 只有超过30秒仍未连接成功时才显示
         div(
           id = "preloader-timeout",
           style = "
@@ -387,7 +357,6 @@ ui <- shinyUI(
         text-align: center;
         font-family: Arial, sans-serif;
       ",
-          
           p(
             "The server may be busy or the network connection may be unstable.",
             style = "
@@ -397,7 +366,6 @@ ui <- shinyUI(
           margin: 0;
         "
           ),
-          
           tags$button(
             type = "button",
             onclick = "window.location.reload();",
@@ -415,11 +383,8 @@ ui <- shinyUI(
           )
         )
       ),
-      
       color = "#ffffff"
     ),
-    
-    
     header = bs4DashNavbar(
       brand = span(
         "| IOBRportal is an integrated web platform powered by the IOBR package.",
@@ -440,7 +405,6 @@ ui <- shinyUI(
       controlbarIcon = shiny::icon("bars"),
       fixed = FALSE
     ),
-    
     sidebar = bs4DashSidebar(
       disable = FALSE,
       width = NULL,
@@ -452,16 +416,14 @@ ui <- shinyUI(
       expandOnHover = TRUE,
       fixed = TRUE,
       customArea = NULL,
-      
       bs4SidebarUserPanel(
         name = tags$span(
-          "IOBRportal", 
+          "IOBRportal",
           style = "font-size:20px;font-weight: bold;"
         ),
         image = "IOBRportal.png"
       ),
       hr(),
-      
       tags$style(HTML("
         #menu_mode .btn-group .btn {
           margin: 0 !important;
@@ -479,7 +441,6 @@ ui <- shinyUI(
           color: white !important;
         }
       ")),
-      
       radioGroupButtons(
         inputId = "menu_mode",
         choices = c("Functions", "Workflows"),
@@ -488,11 +449,10 @@ ui <- shinyUI(
         status = "primary"
       ),
       hr(),
-      
+
       # ========== Functions ==========
       conditionalPanel(
         condition = "input.menu_mode == 'Functions'",
-        
         bs4SidebarMenu(
           id = NULL,
           .list = NULL,
@@ -500,7 +460,6 @@ ui <- shinyUI(
           compact = FALSE,
           childIndent = FALSE,
           legacy = FALSE,
-          
           bs4SidebarMenuItem(
             text = "IOBRportal Introduction",
             tabName = "home",
@@ -508,235 +467,197 @@ ui <- shinyUI(
             href = NULL,
             newTab = TRUE
           ),
-          
           bs4SidebarMenuItem(
             text = "Data Preparation",
             tabName = NULL,
             icon = icon("tools"),
             expandedName = "Data Preparation",
-            
             bs4SidebarMenuSubItem(
               text = "Counts to TPM",
               tabName = "count2tpm",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "Annotate ExpressionSet",
               tabName = "anno_eset",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "Detect Outlier Samples",
               tabName = "find_outlier_samples",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "Remove Duplicate Genes",
               tabName = "remove_duplicate_genes",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "Correct Batch Effect",
               tabName = "remove_batcheffect",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "Mouse-to-Human Genes",
               tabName = "mouse2human_eset",
               icon = icon("sliders-h")
             )
           ),
-          
           bs4SidebarMenuItem(
             text = "SigScore Calculation",
             tabName = NULL,
             icon = icon("chart-pie"),
             expandedName = "SigScore Calculation",
-            
             bs4SidebarMenuSubItem(
               text = "Calculate SigScores",
               tabName = "calculate_sig_score",
               icon = icon("sliders-h")
             )
           ),
-          
           bs4SidebarMenuItem(
             text = "TME Deconvolution",
             tabName = NULL,
             icon = icon("dna"),
             expandedName = "TME Deconvolution",
-            
             bs4SidebarMenuSubItem(
               text = "Deconvolute TME",
               tabName = "deconvo_tme",
               icon = icon("sliders-h")
             )
           ),
-          
           bs4SidebarMenuItem(
             text = "Statistical Analysis",
             tabName = NULL,
             icon = icon("calculator"),
             expandedName = "Statistical Analysis",
-            
             bs4SidebarMenuSubItem(
               text = "Batch Correlation",
               tabName = "batch_cor",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "Batch Partial Correlation",
               tabName = "batch_pcc",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "Batch Survival",
               tabName = "batch_surv",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "Batch Wilcoxon",
               tabName = "batch_wilcoxon",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "Batch Kruskal-Wallis",
               tabName = "batch_kruskal",
               icon = icon("sliders-h")
             )
           ),
-          
           bs4SidebarMenuItem(
             text = "TME Interaction",
             tabName = NULL,
-            icon = icon("project-diagram"), 
+            icon = icon("project-diagram"),
             expandedName = "TME Interaction",
-            
             bs4SidebarMenuSubItem(
               text = "TME Clustering",
               tabName = "tme_cluster",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "Ligand-Receptor Interaction",
               tabName = "lr_cal",
               icon = icon("sliders-h")
             )
           ),
-          
           bs4SidebarMenuItem(
             text = "Visualization",
             tabName = NULL,
             icon = icon("chart-line"),
             expandedName = "Visualization",
-            
             bs4SidebarMenuSubItem(
               text = "Heatmap",
               tabName = "sig_heatmap",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "Box Plot",
               tabName = "sig_box",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "Percentage Bar Plot",
               tabName = "percent_bar_plot",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "Cell Bar Plot",
               tabName = "cell_bar_plot",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "Forest Plot",
               tabName = "sig_forest",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "Correlation Plot",
               tabName = "get_cor",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "Correlation Matrix",
               tabName = "get_cor_matrix",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "Survival Plots",
               tabName = "sig_surv_plot",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "Survival Group Plot",
               tabName = "surv_group",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "Time ROC Curves",
               tabName = "roc_time",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "Signature ROC Curves",
               tabName = "sig_roc",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "PCA Visualization",
               tabName = "iobr_pca",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "Signature GSEA",
               tabName = "sig_gsea",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "Find Markers",
               tabName = "find_markers_in_bulk",
               icon = icon("sliders-h")
             )
           ),
-          
           bs4SidebarMenuItem(
             text = "Mutation Module",
             tabName = NULL,
-            icon = icon("band-aid"),  
+            icon = icon("band-aid"),
             expandedName = "Mutation Module",
-            
             bs4SidebarMenuSubItem(
               text = "Build Mutation Matrix",
               tabName = "make_mut_matrix",
               icon = icon("sliders-h")
             ),
-            
             bs4SidebarMenuSubItem(
               text = "Identify Mutations",
               tabName = "find_mutations",
@@ -746,7 +667,7 @@ ui <- shinyUI(
         )
       ),
       hr(),
-      
+
       # ========== Workflows ==========
       conditionalPanel(
         condition = "input.menu_mode == 'Workflows'",
@@ -754,7 +675,6 @@ ui <- shinyUI(
       ),
       hr()
     ),
-    
     controlbar = bs4DashControlbar(
       style = "padding: 10px;",
       id = NULL,
@@ -764,10 +684,8 @@ ui <- shinyUI(
       overlay = TRUE,
       skin = "light",
       pinned = FALSE,
-      
       skinSelector()
     ),
-    
     footer = bs4DashFooter(
       left = span(
         "Contact with: Qingcong Luo (qingcongl@163.com) or Dr. Dongqiang Zeng (interlaken@smu.edu.cn)",
@@ -776,28 +694,19 @@ ui <- shinyUI(
       right = NULL,
       fixed = TRUE
     ),
-    
     body = bs4DashBody(
       tags$head(
         tags$style(HTML("
-          /* 一劳永逸压缩所有 fileInput 的下边距 */
           .shiny-input-container input[type='file'] {
             margin-bottom: 0px !important;
           }
-      
-          /* 压缩其外层容器（默认会有 mb-3） */
           .shiny-input-container {
             margin-bottom: 4px !important;
           }
-      
-          /* 同时也让所有按钮更紧贴上一行（Run 按钮等） */
           .shiny-input-container + div > .btn {
             margin-top: 0px !important;
           }
         ")),
-        
-        # 不再等所有初始计算全部结束
-        # 只要 Shiny session 建立完成
         tags$script(
           HTML("
             window.iobrSessionInitialized = false;
@@ -828,9 +737,7 @@ ui <- shinyUI(
             });
           ")
         )
-        
       ),
-      
       app_tab_items
     )
   )
@@ -842,11 +749,13 @@ ui <- shinyUI(
 # ------------------------------
 
 server <- function(input, output, session) {
-  session$allowReconnect("force") # 允许网络波动时自动重连，保留之前的计算状态
-  shinyhelper::observe_helpers(withMathJax = FALSE) # 不需要LaTeX
+  session$allowReconnect("force")
+  shinyhelper::observe_helpers(withMathJax = FALSE)
+
+  iobr_register_privacy_cleanup(session)
   
-  iobr_register_privacy_cleanup(session) #清理脚本
-  
+  iobr_visits_server(output, session)
+
   # function
   home_introServer("home_intro", parent_session = session)
   count2tpmServer("mod_count2tpm")
@@ -855,18 +764,18 @@ server <- function(input, output, session) {
   remove_duplicate_genesServer("mod_remove_duplicate_genes")
   remove_batcheffectServer("mod_remove_batcheffect")
   mouse2human_esetServer("mod_mouse2human_eset")
-  
+
   calculate_sig_scoreServer("mod_calculate_sig_score")
   deconvo_tmeServer("mod_deconvo_tme")
   tme_clusterServer("mod_tme_cluster")
   lr_calServer("mod_lr_cal")
-  
+
   batch_survServer("mod_batch_surv")
   batch_corServer("mod_batch_cor")
   batch_pccServer("mod_batch_pcc")
   batch_wilcoxonServer("mod_batch_wilcoxon")
   batch_kruskalServer("mod_batch_kruskal")
-  
+
   sig_heatmapServer("mod_sig_heatmap")
   sig_boxServer("mod_sig_box")
   sig_surv_plotServer("mod_sig_surv_plot")
@@ -881,16 +790,15 @@ server <- function(input, output, session) {
   percent_bar_plotServer("mod_percent_bar_plot")
   sig_gseaServer("mod_sig_gsea")
   find_markers_in_bulkServer("mod_find_markers_in_bulk")
-  
+
   make_mut_matrixServer("mod_make_mut_matrix")
   find_mutationsServer("mod_find_mutations")
-  
+
   # workflow
   workflow_mutationServer("mod_workflow_mutation")
   workflow_iobrServer("mod_workflow_iobr")
   workflow_siggenesServer("mod_workflow_siggenes")
   # database workflow
-  # 只有 4 个 duckdb 文件都存在时，才运行数据库相关 server
   if (database_available) {
     datasets_overviewServer("mod_datasets_overview", parent_session = session)
     workflow_tcgaServer("mod_workflow_tcga", pool = tcga_pool)
@@ -902,4 +810,3 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
-
